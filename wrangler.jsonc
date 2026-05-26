@@ -1,0 +1,30 @@
+{
+  // WordsExpire — a single Worker that serves the static garden and the API.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wordsexpire",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  "account_id": "10b43838f31b9959c8eb61aafdd200f3",
+
+  // The frontend lives in /public and is served directly by the assets runtime.
+  // Requests that don't match a file fall through to the Worker (the API).
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // D1 holds flowers, petals, and reactions.
+  // Replace "database_id" with the id printed by `wrangler d1 create wordsexpire`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wordsexpire",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}

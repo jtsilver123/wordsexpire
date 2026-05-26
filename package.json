@@ -1,0 +1,21 @@
+{
+  "name": "wordsexpire",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A quiet garden where brief notes fade unless others keep them alive.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute wordsexpire --local --file=schema.sql && wrangler d1 execute wordsexpire --local --file=seed.sql",
+    "db:remote": "wrangler d1 execute wordsexpire --remote --file=schema.sql && wrangler d1 execute wordsexpire --remote --file=seed.sql",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.94.0"
+  }
+}

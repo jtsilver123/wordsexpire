@@ -19,6 +19,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Job-level env so the step `if:` conditions below can actually read these.
+    # A step's own `env:` block is not visible to that same step's `if:`.
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      IP_HASH_SALT: ${{ secrets.IP_HASH_SALT }}
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,20 +36,12 @@ jobs:
 
       - name: Deploy Worker
         run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       # Set runtime secrets if they were provided. Skipped quietly if absent.
       - name: Set IP_HASH_SALT
         if: ${{ env.IP_HASH_SALT != '' }}
         run: printf '%s' "$IP_HASH_SALT" | npx wrangler secret put IP_HASH_SALT
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          IP_HASH_SALT: ${{ secrets.IP_HASH_SALT }}
 
       - name: Set ADMIN_TOKEN
         if: ${{ env.ADMIN_TOKEN != '' }}
         run: printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}

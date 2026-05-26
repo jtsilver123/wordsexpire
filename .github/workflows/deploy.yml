@@ -1,0 +1,44 @@
+name: Deploy WordsExpire
+
+# Deploys the Worker from GitHub's runners, which can reach Cloudflare.
+# Requires one repository secret: CLOUDFLARE_API_TOKEN.
+# Optionally also set IP_HASH_SALT and ADMIN_TOKEN to harden the live site.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/clever-mendel-Th9C6
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Deploy Worker
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # Set runtime secrets if they were provided. Skipped quietly if absent.
+      - name: Set IP_HASH_SALT
+        if: ${{ env.IP_HASH_SALT != '' }}
+        run: printf '%s' "$IP_HASH_SALT" | npx wrangler secret put IP_HASH_SALT
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          IP_HASH_SALT: ${{ secrets.IP_HASH_SALT }}
+
+      - name: Set ADMIN_TOKEN
+        if: ${{ env.ADMIN_TOKEN != '' }}
+        run: printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}

@@ -52,10 +52,10 @@
     <div class="wrap">
       <h1>review</h1>
       <div class="bar">
-        <input id="token" type="password" placeholder="admin token" autocomplete="off" />
+        <input id="token" type="password" placeholder="password" autocomplete="off" />
         <button id="load">load</button>
       </div>
-      <div id="out" class="note">enter the token and load the flagged notes.</div>
+      <div id="out" class="note">enter the password and load the flagged notes.</div>
     </div>
     <script>
       const $ = (s) => document.querySelector(s);
@@ -77,7 +77,7 @@
           return;
         }
         if (!res.ok) {
-          out.textContent = res.status === 401 ? 'not authorized.' : 'error ' + res.status;
+          out.textContent = res.status === 401 ? 'wrong password.' : 'error ' + res.status;
           return;
         }
         const { reports } = await res.json();

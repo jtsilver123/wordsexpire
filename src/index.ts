@@ -494,6 +494,10 @@ app.post('/api/report', async (c) => {
 
 // --- admin (bearer token) ----------------------------------------------------
 
+// A friendlier path to the review page. Registered before the gate so the
+// login form itself loads; it does nothing without the password.
+app.get('/admin', (c) => c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url).toString(), c.req.raw)));
+
 app.use('/admin/*', async (c, next) => {
   const auth = c.req.header('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';

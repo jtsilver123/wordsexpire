@@ -269,6 +269,136 @@ select {
   }
 }
 
+/* ---------- fireflies (dusk and night) ---------- */
+.fireflies {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 6000ms var(--ease);
+}
+
+.fireflies.lit {
+  opacity: 1;
+}
+
+.firefly {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 190, 0.95), rgba(220, 210, 120, 0) 70%);
+  animation: fireflyDrift var(--fd, 22s) ease-in-out infinite alternate, fireflyGlow var(--fg, 3.4s) ease-in-out infinite;
+}
+
+@keyframes fireflyDrift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--fx, 40px), var(--fy, -30px));
+  }
+}
+
+@keyframes fireflyGlow {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* A frog that now and then visits a lilypad. */
+.lily-frog {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  z-index: 2;
+  transform-origin: center bottom;
+  animation: frogHop 600ms var(--ease);
+}
+
+@keyframes frogHop {
+  0% {
+    transform: translateY(-26px) scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.lily-frog svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lily-frog.leaving {
+  animation: frogLeave 500ms var(--ease) forwards;
+}
+
+@keyframes frogLeave {
+  to {
+    transform: translateY(-26px) scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* ---------- welcome back ---------- */
+.welcome {
+  position: fixed;
+  left: 50%;
+  top: 1.5rem;
+  transform: translateX(-50%) translateY(-12px);
+  z-index: 8;
+  max-width: min(88vw, 24rem);
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px -24px rgba(58, 51, 44, 0.45);
+  padding: 1rem 1.3rem 0.9rem;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 700ms var(--ease), transform 700ms var(--ease);
+}
+
+.welcome.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.welcome-text {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.welcome-snippet {
+  margin: 0.4rem 0 0;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.welcome-foot {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 0.7rem;
+}
+
 /* ---------- ambient sound ---------- */
 .sound {
   position: fixed;

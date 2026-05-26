@@ -511,6 +511,90 @@ function koiRipples() {
   setTimeout(koiRipples, 1600 + Math.random() * 2200);
 }
 
+// Fireflies drift above the pond and glow at dusk and through the night.
+function setupFireflies() {
+  if (reduceMotion) return;
+  const layer = $('#fireflies');
+  for (let i = 0; i < 14; i++) {
+    const f = document.createElement('div');
+    f.className = 'firefly';
+    f.style.left = `${Math.random() * 100}vw`;
+    f.style.top = `${Math.random() * 100}vh`;
+    f.style.setProperty('--fx', `${Math.random() * 120 - 60}px`);
+    f.style.setProperty('--fy', `${Math.random() * 120 - 60}px`);
+    f.style.setProperty('--fd', `${16 + Math.random() * 16}s`);
+    f.style.setProperty('--fg', `${2.6 + Math.random() * 3}s`);
+    f.style.animationDelay = `${-Math.random() * 16}s, ${-Math.random() * 4}s`;
+    layer.appendChild(f);
+  }
+}
+
+// Now and then a brief, soft shower dimples the whole pond.
+function rain() {
+  let left = 26 + Math.floor(Math.random() * 20);
+  const tick = () => {
+    if (left-- <= 0 || $('#viewport').hidden) return;
+    makeRipple(Math.random() * window.innerWidth, Math.random() * window.innerHeight, Math.random() < 0.5);
+    setTimeout(tick, 170 + Math.random() * 230);
+  };
+  tick();
+}
+function rainSchedule() {
+  setTimeout(
+    () => {
+      if (!reduceMotion && !$('#viewport').hidden && Math.random() < 0.5) rain();
+      rainSchedule();
+    },
+    180000 + Math.random() * 240000,
+  );
+}
+
+function drawFrogSvg() {
+  const svg = makeEl('svg', { viewBox: '0 0 32 32' });
+  svg.appendChild(makeEl('ellipse', { cx: 16, cy: 20, rx: 11, ry: 9, fill: '#7f9c66' }));
+  svg.appendChild(makeEl('ellipse', { cx: 16, cy: 23.5, rx: 8, ry: 5, fill: '#90af75' }));
+  svg.appendChild(makeEl('circle', { cx: 10, cy: 10, r: 5, fill: '#7f9c66' }));
+  svg.appendChild(makeEl('circle', { cx: 22, cy: 10, r: 5, fill: '#7f9c66' }));
+  svg.appendChild(makeEl('circle', { cx: 10, cy: 9.2, r: 3.2, fill: '#fbf7f1' }));
+  svg.appendChild(makeEl('circle', { cx: 22, cy: 9.2, r: 3.2, fill: '#fbf7f1' }));
+  svg.appendChild(makeEl('circle', { cx: 10.6, cy: 9.6, r: 1.5, fill: '#3a332c' }));
+  svg.appendChild(makeEl('circle', { cx: 21.4, cy: 9.6, r: 1.5, fill: '#3a332c' }));
+  svg.appendChild(makeEl('path', { d: 'M11 21 Q16 25 21 21', stroke: '#4f6347', 'stroke-width': '1.4', fill: 'none', 'stroke-linecap': 'round' }));
+  return svg;
+}
+
+// Once in a while a frog hops onto a lilypad that's on screen, then leaves.
+function frogVisit() {
+  const pads = [...$('#world').querySelectorAll('.lilypad')].filter((pad) => {
+    if (pad.querySelector('.lily-frog')) return false;
+    const r = pad.getBoundingClientRect();
+    return r.right > 0 && r.left < window.innerWidth && r.bottom > 0 && r.top < window.innerHeight;
+  });
+  if (!pads.length) return;
+  const pad = pads[Math.floor(Math.random() * pads.length)];
+  const frog = document.createElement('div');
+  frog.className = 'lily-frog';
+  frog.appendChild(drawFrogSvg());
+  pad.appendChild(frog);
+  setTimeout(() => {
+    const r = frog.getBoundingClientRect();
+    if (r.top > 0 && r.top < window.innerHeight) makeRipple(r.left + r.width / 2, r.bottom, false);
+  }, 600);
+  setTimeout(() => {
+    frog.classList.add('leaving');
+    setTimeout(() => frog.remove(), 520);
+  }, 4000 + Math.random() * 3500);
+}
+function frogSchedule() {
+  setTimeout(
+    () => {
+      if (!reduceMotion && !$('#viewport').hidden) frogVisit();
+      frogSchedule();
+    },
+    60000 + Math.random() * 90000,
+  );
+}
+
 function renderWorld() {
   const world = $('#world');
   // Remove only flowers and lilypads; the koi keep swimming across re-renders.
@@ -1315,6 +1399,69 @@ function saveMyNote(id) {
   const a = getMyNotes().filter((x) => x !== id);
   a.push(id);
   localStorage.setItem('we_my_notes', JSON.stringify(a.slice(-100)));
+  const seen = getSeen();
+  if (seen[id] === undefined) seen[id] = 0; // a fresh note starts unkept
+  saveSeen(seen);
+}
+
+// How many times we last saw each of our notes kept alive, to notice when a
+// stranger has tended one while we were away.
+function getSeen() {
+  try {
+    return JSON.parse(localStorage.getItem('we_my_seen') || '{}');
+  } catch {
+    return {};
+  }
+}
+function saveSeen(m) {
+  localStorage.setItem('we_my_seen', JSON.stringify(m));
+}
+
+let welcomeTimer = 0;
+function hideWelcome() {
+  const w = $('#welcome');
+  w.classList.remove('show');
+  setTimeout(() => (w.hidden = true), 600);
+}
+
+// On return, a quiet word about the notes you left: tended by a stranger, or
+// fading and in need of you.
+function welcomeBack() {
+  const ids = getMyNotes();
+  if (!ids.length) return;
+  const byId = new Map();
+  state.flowers.forEach((f) => f.petals.forEach((p) => byId.set(p.id, p)));
+  const mine = ids.map((id) => byId.get(id)).filter(Boolean);
+  if (!mine.length) return;
+
+  const seen = getSeen();
+  const tended = mine.filter((p) => (p.reactionCount || 0) > (seen[p.id] ?? 0));
+  const fading = mine.filter((p) => !p.expired && p.aliveness > 0 && p.aliveness < 0.3);
+  mine.forEach((p) => (seen[p.id] = p.reactionCount || 0)); // reset the baseline
+  saveSeen(seen);
+
+  let text = null;
+  let target = null;
+  if (tended.length) {
+    target = tended[tended.length - 1];
+    text = 'while you were away, someone kept your words alive.';
+  } else if (fading.length) {
+    target = fading[0];
+    text = 'one of the notes you left is fading. it could use you.';
+  }
+  if (!target) return;
+
+  $('#welcomeText').textContent = text;
+  $('#welcomeSnippet').textContent = `“${target.text.length > 70 ? `${target.text.slice(0, 70)}…` : target.text}”`;
+  $('#welcomeGo').onclick = () => {
+    hideWelcome();
+    goToPetal(target.id);
+  };
+  const w = $('#welcome');
+  w.hidden = false;
+  requestAnimationFrame(() => w.classList.add('show'));
+  clearTimeout(welcomeTimer);
+  welcomeTimer = setTimeout(hideWelcome, 10000);
 }
 
 // ---------- overlays + chrome ----------
@@ -1354,6 +1501,7 @@ function wireOverlays() {
     const p = flowerPosition(i);
     focusOn(p.x, p.y, 1.0);
   });
+  $('#welcomeClose').addEventListener('click', hideWelcome);
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#commentForm').addEventListener('submit', submitComment);
   $('#composeForm').addEventListener('submit', placePetal);
@@ -1624,6 +1772,9 @@ function applyWater() {
   for (let i = 0; i < 4; i++) {
     root.style.setProperty(`--w${i}`, rgbStr(mixRgb(hexToRgb(lo.c[i]), hexToRgb(hi.c[i]), t)));
   }
+  // Fireflies come out at dusk and stay through the night.
+  const fireflies = $('#fireflies');
+  if (fireflies) fireflies.classList.toggle('lit', h >= 18 || h < 6);
 }
 
 // The quieter, secondary controls appear only once the visitor begins.
@@ -1644,6 +1795,8 @@ async function start() {
   const { ok, body } = await api('/api/flowers');
   if (ok && body.flowers) setFlowers(body.flowers);
   setupKoi();
+  setupFireflies();
+  applyWater(); // re-evaluate now that the fireflies layer exists
 
   // On arrival, show only the pond and the one invitation. The rest of the
   // chrome fades in once the visitor first reaches into the garden.
@@ -1669,6 +1822,9 @@ async function start() {
   showHint();
   ambientRipple();
   koiRipples();
+  rainSchedule();
+  frogSchedule();
+  setTimeout(welcomeBack, 2800);
 }
 
 // If the URL points at one note (/p/:id) or flower (/f/:id), go there.

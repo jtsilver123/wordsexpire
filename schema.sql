@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS petals (
   text            TEXT NOT NULL,
   color           TEXT NOT NULL,            -- a petal color key (rose, sage, ...)
   created_at      INTEGER NOT NULL,
+  spoken_at       INTEGER NOT NULL,         -- when the words were first said (may predate the note)
   last_renewed_at INTEGER NOT NULL,         -- a reaction resets this to now
   reaction_count  INTEGER NOT NULL DEFAULT 0,
   deleted_at      INTEGER                   -- soft-delete once a petal is long gone

@@ -1,0 +1,521 @@
+:root {
+  --bg: #f5efe6;
+  --surface: #fbf7f1;
+  --text: #3a332c;
+  --muted: #8c8278;
+  --accent: #b26f5c;
+  --hairline: rgba(58, 51, 44, 0.12);
+
+  --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --slow: 900ms;
+  --slower: 1200ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Soft fade used in a few places. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- onboarding ---------- */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4rem;
+  background: var(--bg);
+  z-index: 30;
+  padding: 2rem;
+  text-align: center;
+}
+
+.onboarding-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  max-width: 30rem;
+}
+
+.onboarding .line {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--text);
+  opacity: 0;
+}
+
+.onboarding .line.show {
+  animation: fadeIn var(--slower) var(--ease) forwards;
+}
+
+/* ---------- stage ---------- */
+.stage {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: 4rem 1fr 4rem;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  padding: 3vh 1rem;
+}
+
+.bloom {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  animation: fadeIn var(--slower) var(--ease) both;
+}
+
+.theme {
+  margin: 0;
+  font-style: italic;
+  font-size: 1.35rem;
+  color: var(--muted);
+  text-align: center;
+  max-width: 24rem;
+  min-height: 1.4em;
+}
+
+.flower-holder {
+  width: min(78vw, 60vh, 460px);
+  aspect-ratio: 1;
+}
+
+.flower-holder svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hint {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  min-height: 1.2em;
+  text-align: center;
+  transition: opacity var(--slow) var(--ease);
+}
+
+.signature {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 1.5rem 0 0;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* ---------- navigation between flowers ---------- */
+.nav {
+  grid-row: 1;
+  justify-self: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity var(--slow) var(--ease), color var(--slow) var(--ease);
+  padding: 1rem;
+}
+
+.nav:hover {
+  opacity: 0.9;
+  color: var(--accent);
+}
+
+.nav-prev {
+  grid-column: 1;
+}
+.nav-next {
+  grid-column: 3;
+}
+.nav[hidden] {
+  visibility: hidden;
+}
+
+/* ---------- flower internals ---------- */
+.petal {
+  cursor: pointer;
+  transition: transform var(--slow) var(--ease), opacity var(--slow) var(--ease),
+    filter var(--slow) var(--ease);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.petal:hover {
+  filter: brightness(1.04);
+}
+
+.petal.empty {
+  cursor: default;
+}
+
+.petal.blooming {
+  animation: petalBloom var(--slower) var(--ease) both;
+}
+
+@keyframes petalBloom {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.petal.renewing {
+  animation: petalRenew 1100ms var(--ease);
+}
+
+@keyframes petalRenew {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+  40% {
+    filter: brightness(1.18) saturate(1.25) drop-shadow(0 0 8px rgba(178, 111, 92, 0.4));
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+.heart {
+  transition: transform var(--slow) var(--ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.heart.has-room {
+  cursor: pointer;
+}
+
+.heart.has-room .heart-core {
+  animation: breathe 5.5s var(--ease) infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.flower-sway {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: sway 9s ease-in-out infinite alternate;
+}
+
+@keyframes sway {
+  from {
+    transform: rotate(-1.1deg);
+  }
+  to {
+    transform: rotate(1.1deg);
+  }
+}
+
+/* ---------- overlays (reading + composing) ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(58, 51, 44, 0.28);
+  backdrop-filter: blur(2px);
+  z-index: 20;
+  padding: 1.5rem;
+  animation: fadeIn var(--slow) var(--ease);
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px -28px rgba(58, 51, 44, 0.35);
+  padding: 3rem 2.6rem 2.2rem;
+  max-width: 30rem;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  animation: cardRise var(--slower) var(--ease) both;
+}
+
+@keyframes cardRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.petal-text {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  line-height: 1.6;
+}
+
+.petal-spoken {
+  margin: 0 0 1.8rem;
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.keep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.drop {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: box-shadow var(--slow) var(--ease), border-color var(--slow) var(--ease),
+    transform var(--slow) var(--ease);
+}
+
+.drop-glyph {
+  width: 11px;
+  height: 11px;
+  border-radius: 60% 60% 60% 60% / 75% 75% 50% 50%;
+  background: var(--muted);
+  transform: rotate(45deg);
+  transition: background var(--slow) var(--ease), box-shadow var(--slow) var(--ease);
+}
+
+.drop:hover {
+  border-color: rgba(178, 111, 92, 0.4);
+  box-shadow: 0 0 18px rgba(178, 111, 92, 0.25);
+}
+
+.drop:hover .drop-glyph {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(178, 111, 92, 0.5);
+}
+
+.keep-label {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  transition: color var(--slow) var(--ease);
+}
+
+.keep.kept .drop {
+  border-color: rgba(178, 111, 92, 0.5);
+  box-shadow: 0 0 22px rgba(178, 111, 92, 0.35);
+}
+.keep.kept .drop-glyph {
+  background: var(--accent);
+}
+
+/* ---------- composer ---------- */
+.compose-caption {
+  margin: 0 0 1.4rem;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+
+textarea {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  line-height: 1.6;
+  color: var(--text);
+  resize: none;
+  padding: 0.4rem 0.2rem 0.8rem;
+  text-align: center;
+}
+
+textarea:focus {
+  outline: none;
+  border-bottom-color: rgba(178, 111, 92, 0.4);
+}
+
+.when {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.6rem;
+}
+
+.when span {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.when input[type='date'] {
+  border: none;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--text);
+  padding: 0.2rem 0.3rem;
+  text-align: center;
+  color-scheme: light;
+}
+
+.when input[type='date']:focus {
+  outline: none;
+  border-bottom-color: rgba(178, 111, 92, 0.4);
+}
+
+.compose-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 1.6rem;
+  min-height: 1.6rem;
+}
+
+.counter {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.compose-done {
+  margin: 1.4rem 0 0;
+  font-size: 1.3rem;
+  font-style: italic;
+  animation: fadeIn var(--slow) var(--ease);
+}
+
+/* Honeypot stays out of sight and out of the tab order. */
+.gate {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ---------- text links / buttons ---------- */
+.text-link {
+  background: none;
+  border: none;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  transition: color var(--slow) var(--ease);
+}
+
+.text-link:hover {
+  color: var(--accent);
+}
+
+.place {
+  font-size: 0.95rem;
+}
+
+.close {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  font-size: 0.78rem;
+}
+
+#begin {
+  font-size: 1rem;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media (max-width: 560px) {
+  body {
+    font-size: 18px;
+  }
+  .stage {
+    grid-template-columns: 2.6rem 1fr 2.6rem;
+  }
+  .card {
+    padding: 2.6rem 1.6rem 1.8rem;
+  }
+  .petal-text {
+    font-size: 1.35rem;
+  }
+}

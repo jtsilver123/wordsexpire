@@ -52,6 +52,7 @@ type PetalRow = {
   text: string;
   color: string;
   created_at: number;
+  spoken_at: number;
   last_renewed_at: number;
   reaction_count: number;
 };
@@ -63,6 +64,7 @@ function shapePetal(p: PetalRow, at: number) {
     text: p.text,
     color: p.color,
     createdAt: p.created_at,
+    spokenAt: p.spoken_at,
     aliveness: a,
     // Once aliveness hits zero a petal lingers faintly through the grace window.
     isGhost: a <= 0,
@@ -105,7 +107,7 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 
   const { results } = await db
     .prepare(
-      'SELECT id, flower_id, text, color, created_at, last_renewed_at, reaction_count ' +
+      'SELECT id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count ' +
         'FROM petals WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ? ' +
         'ORDER BY created_at ASC',
     )
@@ -174,8 +176,8 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const ipHash = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
 
   const body = await c.req
-    .json<{ text?: string; website?: string }>()
-    .catch(() => ({}) as { text?: string; website?: string });
+    .json<{ text?: string; website?: string; spokenAt?: number }>()
+    .catch(() => ({}) as { text?: string; website?: string; spokenAt?: number });
   // Honeypot: a hidden field humans never fill. Pretend it worked, plant nothing.
   if (body.website) return c.json({ message: 'Thank you for that.' }, 200);
 
@@ -183,6 +185,11 @@ app.post('/api/flowers/:id/petals', async (c) => {
   if (!text) return c.json({ message: 'There were no words to leave.' }, 400);
   if (text.length > MAX_TEXT) return c.json({ message: 'That was a little too long to hold.' }, 400);
   if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
+
+  // When the words were first said. Defaults to today; one may reach back, never forward.
+  let spokenAt = Number(body.spokenAt);
+  if (!Number.isFinite(spokenAt)) spokenAt = at;
+  spokenAt = Math.min(Math.max(Math.floor(spokenAt), 0), at);
 
   if (await rateExceeded(c.env.DB, ipHash, 'petal', PETALS_PER_HOUR, HOUR, at)) {
     return c.json({ message: 'You have left several already. Come back in a while.' }, 429);
@@ -195,13 +202,21 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const id = uuid();
   await c.env.DB.prepare(
-    'INSERT INTO petals (id, flower_id, text, color, created_at, last_renewed_at, reaction_count) VALUES (?, ?, ?, ?, ?, ?, 0)',
+    'INSERT INTO petals (id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
   )
-    .bind(id, flowerId, text, color, at, at)
+    .bind(id, flowerId, text, color, at, spokenAt, at)
     .run();
   await logRate(c.env.DB, ipHash, 'petal', at);
 
-  return c.json({ petal: shapePetal({ id, flower_id: flowerId, text, color, created_at: at, last_renewed_at: at, reaction_count: 0 }, at) }, 201);
+  return c.json(
+    {
+      petal: shapePetal(
+        { id, flower_id: flowerId, text, color, created_at: at, spoken_at: spokenAt, last_renewed_at: at, reaction_count: 0 },
+        at,
+      ),
+    },
+    201,
+  );
 });
 
 app.post('/api/petals/:id/react', async (c) => {
@@ -214,7 +229,7 @@ app.post('/api/petals/:id/react', async (c) => {
   }
 
   const petal = await c.env.DB.prepare(
-    'SELECT id, flower_id, text, color, created_at, last_renewed_at, reaction_count FROM petals WHERE id = ? AND deleted_at IS NULL',
+    'SELECT id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count FROM petals WHERE id = ? AND deleted_at IS NULL',
   )
     .bind(petalId)
     .first<PetalRow>();

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>WordsExpire</title>
+    <meta
+      name="description"
+      content="A quiet garden. Leave a small note. It will fade unless others keep it alive."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- First visit only: three quiet lines. -->
+    <div id="onboarding" class="onboarding" hidden>
+      <div class="onboarding-lines">
+        <p class="line" data-step="0">Leave a small note on a flower.</p>
+        <p class="line" data-step="1">Notes fade with time.</p>
+        <p class="line" data-step="2">Touch someone else's, and it lives a little longer.</p>
+      </div>
+      <button id="begin" class="text-link" hidden>begin</button>
+    </div>
+
+    <main id="stage" class="stage" hidden>
+      <button class="nav nav-prev" id="navPrev" aria-label="another flower">‹</button>
+
+      <section class="bloom" id="bloom" aria-live="polite">
+        <p class="theme" id="theme"></p>
+        <div class="flower-holder" id="flowerHolder"></div>
+        <p class="hint" id="hint"></p>
+      </section>
+
+      <button class="nav nav-next" id="navNext" aria-label="another flower">›</button>
+
+      <p class="signature">a small note will fade unless others keep it alive</p>
+    </main>
+
+    <!-- Reading a petal. -->
+    <div id="reader" class="overlay" hidden>
+      <div class="card reader-card" role="dialog" aria-modal="true">
+        <p class="petal-text" id="petalText"></p>
+        <p class="petal-spoken" id="petalSpoken" hidden></p>
+        <div class="keep">
+          <button class="drop" id="keepBtn" aria-label="keep alive">
+            <span class="drop-glyph"></span>
+          </button>
+          <span class="keep-label" id="keepLabel">keep alive</span>
+        </div>
+        <button class="text-link close" data-close>close</button>
+      </div>
+    </div>
+
+    <!-- Leaving a petal. -->
+    <div id="composer" class="overlay" hidden>
+      <div class="card composer-card" role="dialog" aria-modal="true">
+        <p class="compose-caption">Leave something small.</p>
+        <form id="composeForm" autocomplete="off">
+          <!-- Honeypot: hidden from people, tempting to bots. -->
+          <div class="gate" aria-hidden="true">
+            <label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <textarea id="composeText" maxlength="280" rows="4" aria-label="your note"></textarea>
+          <label class="when" for="composeWhen">
+            <span>when were these words said?</span>
+            <input type="date" id="composeWhen" />
+          </label>
+          <div class="compose-foot">
+            <span class="counter" id="counter" hidden></span>
+            <button type="submit" class="text-link place" id="placeBtn">place it</button>
+          </div>
+        </form>
+        <p class="compose-done" id="composeDone" hidden>Thank you for that.</p>
+        <button class="text-link close" data-close>close</button>
+      </div>
+    </div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

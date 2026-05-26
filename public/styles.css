@@ -47,6 +47,17 @@ body {
   }
 }
 
+/* Opacity-only fade for elements positioned with their own transform,
+   so the entrance animation can't clobber that positioning. */
+@keyframes softIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* ---------- onboarding ---------- */
 .onboarding {
   position: fixed;
@@ -161,7 +172,7 @@ body {
   line-height: 1.5;
   text-align: center;
   pointer-events: none;
-  animation: fadeIn 320ms var(--ease);
+  animation: softIn 280ms var(--ease);
 }
 
 .hint {
@@ -199,7 +210,7 @@ body {
   border: none;
   cursor: pointer;
   color: var(--muted);
-  animation: fadeIn var(--slow) var(--ease);
+  animation: softIn var(--slow) var(--ease);
 }
 
 .compass-arrow {

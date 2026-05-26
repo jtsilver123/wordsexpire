@@ -518,7 +518,8 @@ function openReader(petal, pathEl) {
   $('#reader').hidden = false;
 }
 
-async function keepAlive() {
+async function keepAlive(e) {
+  if (e) e.preventDefault();
   if (!state.openPetalId) return;
   $('#keepBtn').disabled = true;
 
@@ -544,9 +545,9 @@ async function keepAlive() {
     state.openPetalEl.style.opacity = String(0.4 + 0.6 * petal.aliveness);
   }
 
+  // The petal updated in place above, so just close — no full-garden rebuild.
   setTimeout(() => {
     $('#reader').hidden = true;
-    renderWorld();
   }, 1100);
 }
 

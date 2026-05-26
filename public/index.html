@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=4" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -24,7 +24,7 @@
         <p class="line" data-step="1">Notes fade with time.</p>
         <p class="line" data-step="2">Touch someone else's, and it lives a little longer.</p>
       </div>
-      <button id="begin" class="text-link" hidden>begin</button>
+      <button type="button" id="begin" class="text-link" hidden>begin</button>
     </div>
 
     <!-- The garden is a single, never-ending field. Drag to wander, scroll to zoom. -->
@@ -32,10 +32,10 @@
       <div id="world" class="world"></div>
     </div>
 
-    <button class="corner-link" id="aboutBtn" hidden>the garden</button>
+    <button type="button" class="corner-link" id="aboutBtn" hidden>the garden</button>
 
     <!-- Appears when you've wandered past the last flower, pointing the way back. -->
-    <button class="compass" id="compass" hidden aria-label="back to the flowers">
+    <button type="button" class="compass" id="compass" hidden aria-label="back to the flowers">
       <span class="compass-arrow" id="compassArrow">→</span>
       <span class="compass-label">back to the flowers</span>
     </button>
@@ -51,7 +51,7 @@
           someone came back to tend. Like a garden — like any love — it lives by being watered.
         </p>
         <div class="stats" id="stats"></div>
-        <button class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
 
@@ -66,12 +66,12 @@
         <p class="petal-spoken" id="petalSpoken" hidden></p>
         <p class="petal-life" id="petalLife"></p>
         <div class="keep">
-          <button class="drop" id="keepBtn" aria-label="keep alive">
+          <button type="button" class="drop" id="keepBtn" aria-label="keep alive">
             <span class="drop-glyph"></span>
           </button>
           <span class="keep-label" id="keepLabel">keep alive</span>
         </div>
-        <button class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
 
@@ -150,10 +150,10 @@
           </div>
         </form>
         <p class="compose-done" id="composeDone" hidden>Thank you for that.</p>
-        <button class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
 
-    <script src="/app.js" type="module"></script>
+    <script src="/app.js?v=4" type="module"></script>
   </body>
 </html>

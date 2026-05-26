@@ -1221,6 +1221,7 @@ async function start() {
   $('#aboutBtn').hidden = false;
   $('#leaveBtn').hidden = false;
   $('#wanderBtn').hidden = false;
+  $('#credit').hidden = false;
   $('#sound').hidden = false;
   setupSound();
 

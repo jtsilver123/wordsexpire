@@ -553,6 +553,26 @@ body {
   color: var(--text);
 }
 
+/* A small credit, bottom-right. */
+.credit {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.2rem;
+  margin: 0;
+  z-index: 6;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  opacity: 0.8;
+  pointer-events: none;
+  animation: softIn var(--slower) var(--ease);
+}
+
+.credit-heart {
+  font-size: 0.78rem;
+}
+
 .corner-link {
   position: fixed;
   top: 1.4rem;
@@ -1358,6 +1378,11 @@ textarea:focus {
   }
   .wander {
     bottom: 3.9rem;
+  }
+  .credit {
+    right: 0.9rem;
+    bottom: 0.9rem;
+    font-size: 0.62rem;
   }
   /* Drop the hint below the logo and the garden link so they never overlap. */
   .hint {

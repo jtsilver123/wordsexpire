@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=8" />
+    <link rel="stylesheet" href="/styles.css?v=9" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -27,8 +27,9 @@
       <button type="button" id="begin" class="text-link" hidden>begin</button>
     </div>
 
-    <!-- The garden is a single, never-ending field. Drag to wander, scroll to zoom. -->
+    <!-- The pond: a single, never-ending surface. Drag to drift, scroll to zoom. -->
     <div id="viewport" class="viewport" hidden>
+      <div id="ripples" class="ripples"></div>
       <div id="world" class="world"></div>
     </div>
 
@@ -169,6 +170,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=8" type="module"></script>
+    <script src="/app.js?v=9" type="module"></script>
   </body>
 </html>

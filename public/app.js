@@ -41,6 +41,7 @@ const state = {
 const view = { x: 0, y: 0, scale: 1 };
 let tweenToken = 0;
 let moved = false; // did the last gesture drag, rather than tap?
+let flowerNodes = []; // { node, wx, wy } for the cursor-wave displacement
 
 // ---------- tiny helpers ----------
 
@@ -284,14 +285,94 @@ function buildFlowerNode(flower, index) {
   const pos = flowerPosition(index);
   node.style.left = `${pos.x}px`;
   node.style.top = `${pos.y}px`;
-  node.appendChild(drawFlowerSvg(flower));
+
+  const shadow = document.createElement('div');
+  shadow.className = 'flower-shadow';
+  node.appendChild(shadow);
+
+  // The inner layer bobs on the water; the outer .flower carries the wave.
+  const bob = document.createElement('div');
+  bob.className = 'flower-bob';
+  const r = seeded(flower.id, 11);
+  bob.style.animationDuration = `${6 + r * 4}s`;
+  bob.style.animationDelay = `${-r * 6}s`; // desync each flower's float
+  bob.appendChild(drawFlowerSvg(flower));
+  node.appendChild(bob);
   return node;
 }
 
 function renderWorld() {
   const world = $('#world');
   world.innerHTML = '';
-  state.flowers.forEach((flower, i) => world.appendChild(buildFlowerNode(flower, i)));
+  flowerNodes = [];
+  state.flowers.forEach((flower, i) => {
+    const node = buildFlowerNode(flower, i);
+    world.appendChild(node);
+    const p = flowerPosition(i);
+    flowerNodes.push({ node, wx: p.x, wy: p.y });
+  });
+}
+
+// ---------- the cursor wave ----------
+// Where the cursor moves on the water, nearby flowers drift away from it and
+// settle back, and a ripple spreads.
+
+let wavePending = false;
+let waveCx = 0;
+let waveCy = 0;
+let lastRippleX = -999;
+let lastRippleY = -999;
+
+function applyWave(cx, cy) {
+  const R = 240; // reach of the cursor's wave, in screen pixels
+  for (const f of flowerNodes) {
+    const sx = view.x + f.wx * view.scale;
+    const sy = view.y + f.wy * view.scale;
+    const dx = sx - cx;
+    const dy = sy - cy;
+    const d = Math.hypot(dx, dy);
+    let tx = 0;
+    let ty = 0;
+    if (d < R && d > 0.01) {
+      const influence = 1 - d / R;
+      const push = influence * influence * 36; // eased falloff
+      tx = (dx / d) * push;
+      ty = (dy / d) * push;
+    }
+    f.node.style.transform = `translate(${tx}px, ${ty}px)`;
+  }
+}
+
+function requestWave(cx, cy) {
+  if (reduceMotion) return;
+  waveCx = cx;
+  waveCy = cy;
+  if (!wavePending) {
+    wavePending = true;
+    requestAnimationFrame(() => {
+      wavePending = false;
+      applyWave(waveCx, waveCy);
+    });
+  }
+}
+
+function settleWave() {
+  for (const f of flowerNodes) f.node.style.transform = 'translate(0px, 0px)';
+}
+
+function spawnRipple(x, y) {
+  if (reduceMotion) return;
+  if (Math.hypot(x - lastRippleX, y - lastRippleY) < 22) return;
+  lastRippleX = x;
+  lastRippleY = y;
+  const layer = $('#ripples');
+  if (layer.childElementCount > 26) return;
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.left = `${x}px`;
+  r.style.top = `${y}px`;
+  r.addEventListener('animationend', () => r.remove());
+  layer.appendChild(r);
 }
 
 function setFlowers(list) {
@@ -412,6 +493,7 @@ function wireWorld() {
 
   vp.addEventListener('pointerdown', (e) => {
     tweenToken++; // stop any easing the moment a hand touches the world
+    settleWave(); // flowers shouldn't stay leaned while dragging the pond
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     moved = false;
     if (pointers.size === 1) last = { x: e.clientX, y: e.clientY };
@@ -424,6 +506,12 @@ function wireWorld() {
   });
 
   vp.addEventListener('pointermove', (e) => {
+    // Hovering (no button down): stir the water and nudge the flowers.
+    if (pointers.size === 0) {
+      requestWave(e.clientX, e.clientY);
+      spawnRipple(e.clientX, e.clientY);
+      return;
+    }
     if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -455,6 +543,7 @@ function wireWorld() {
   };
   vp.addEventListener('pointerup', release);
   vp.addEventListener('pointercancel', release);
+  vp.addEventListener('pointerleave', settleWave);
 
   vp.addEventListener(
     'wheel',

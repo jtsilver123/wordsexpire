@@ -93,14 +93,14 @@ body {
 }
 
 /* ---------- stage ---------- */
-/* ---------- the world (pan / zoom field) ---------- */
+/* ---------- the pond (pan / zoom surface) ---------- */
 .viewport {
   position: fixed;
   inset: 0;
   overflow: hidden;
   touch-action: none; /* we handle pan and pinch ourselves */
   cursor: grab;
-  background: radial-gradient(circle at 50% 40%, #f8f2e9 0%, var(--bg) 70%);
+  background: radial-gradient(140% 100% at 50% 0%, #e7eee9 0%, #d9e2dd 38%, #c8d5d0 78%, #bccac4 100%);
   animation: fadeIn var(--slower) var(--ease) both;
 }
 
@@ -108,24 +108,117 @@ body {
   cursor: grabbing;
 }
 
+/* Slow drifting light on the water, so the surface is never quite still. */
+.viewport::before,
+.viewport::after {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 28% at 28% 35%, rgba(255, 255, 255, 0.22), transparent 60%),
+    radial-gradient(32% 24% at 72% 62%, rgba(255, 255, 255, 0.16), transparent 60%),
+    radial-gradient(28% 22% at 55% 82%, rgba(236, 223, 200, 0.18), transparent 60%);
+  animation: caustics 26s ease-in-out infinite alternate;
+}
+
+.viewport::after {
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+  opacity: 0.7;
+  filter: blur(3px);
+}
+
+@keyframes caustics {
+  0% {
+    transform: translate(-2.5%, -1.5%) scale(1);
+  }
+  100% {
+    transform: translate(2.5%, 3%) scale(1.06);
+  }
+}
+
+/* Momentary ripples that follow the cursor across the water. */
+.ripples {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ripple {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  animation: rippleOut 1300ms ease-out forwards;
+}
+
+@keyframes rippleOut {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(5);
+    opacity: 0;
+  }
+}
+
 .world {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 2;
   transform-origin: 0 0;
   will-change: transform;
 }
 
-/* Each flower sits at a point in the field, centered on that point. */
+/* Each flower floats at a point on the pond, centered on that point. The
+   element itself carries the cursor-wave displacement; the inner layer bobs. */
 .flower {
   position: absolute;
   width: 400px;
   height: 400px;
   margin: -200px 0 0 -200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: fadeIn var(--slower) var(--ease) both;
+  animation: softIn var(--slower) var(--ease) both;
+  transition: transform 760ms var(--ease);
+  will-change: transform;
+}
+
+.flower-bob {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  animation: bob 7s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes bob {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(6px);
+  }
+}
+
+/* The soft mark a floating flower leaves on the water beneath it. */
+.flower-shadow {
+  position: absolute;
+  left: 50%;
+  top: 53%;
+  width: 56%;
+  height: 20%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(50% 50% at 50% 50%, rgba(40, 60, 70, 0.18), transparent 72%);
+  filter: blur(7px);
+  z-index: 0;
 }
 
 .flower-theme {

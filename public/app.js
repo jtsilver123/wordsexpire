@@ -23,6 +23,8 @@ const MEDIUM_PHRASE = {
 };
 
 const LIFESPAN_SECONDS = 604800; // 7 days; mirrors the Worker's decay window
+const MIN_CHARS = 2; // a note needs at least a little
+const MAX_CHARS = 280;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // the angle seeds settle into
 const SPACING = 560; // world distance between successive flowers
@@ -489,6 +491,25 @@ function hideTip() {
   $('#petalTip').hidden = true;
 }
 
+// ---------- overlays open and close with a soft fade ----------
+
+function openOverlay(el) {
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+
+function closeOverlay(el) {
+  if (!el || el.hidden) return;
+  el.classList.remove('open');
+  if (reduceMotion) {
+    el.hidden = true;
+  } else {
+    setTimeout(() => {
+      el.hidden = true;
+    }, 460);
+  }
+}
+
 // ---------- reading a petal ----------
 
 function openReader(petal, pathEl) {
@@ -515,7 +536,7 @@ function openReader(petal, pathEl) {
   $('.keep').classList.remove('kept');
   $('#keepLabel').textContent = 'keep alive';
   $('#keepBtn').disabled = false;
-  $('#reader').hidden = false;
+  openOverlay($('#reader'));
 }
 
 async function keepAlive(e) {
@@ -546,12 +567,22 @@ async function keepAlive(e) {
   }
 
   // The petal updated in place above, so just close — no full-garden rebuild.
-  setTimeout(() => {
-    $('#reader').hidden = true;
-  }, 1100);
+  setTimeout(() => closeOverlay($('#reader')), 1100);
 }
 
 // ---------- leaving a petal ----------
+
+// Keep the counter and the "place it" button in step with what's typed.
+function updateComposerState() {
+  const len = $('#composeText').value.length;
+  const trimmed = $('#composeText').value.trim().length;
+  const counter = $('#counter');
+  counter.hidden = false;
+  counter.textContent = `${len} / ${MAX_CHARS}`;
+  counter.classList.toggle('near', len > MAX_CHARS - 20);
+  counter.classList.toggle('short', trimmed < MIN_CHARS);
+  $('#placeBtn').disabled = trimmed < MIN_CHARS;
+}
 
 async function openComposer(flower) {
   let target = flower;
@@ -579,9 +610,8 @@ async function openComposer(flower) {
   $('#details').open = false;
   $('#composeForm').hidden = false;
   $('#composeDone').hidden = true;
-  $('#counter').hidden = true;
-  $('#placeBtn').disabled = false;
-  $('#composer').hidden = false;
+  updateComposerState(); // shows "0 / 280" and disables the button until there are words
+  openOverlay($('#composer'));
   setTimeout(() => $('#composeText').focus(), 420);
 }
 
@@ -625,7 +655,7 @@ async function placePetal(e) {
   flower.hasRoom = flower.petals.length < flower.maxPetals;
 
   setTimeout(async () => {
-    $('#composer').hidden = true;
+    closeOverlay($('#composer'));
     // If this flower just filled, let the garden grow a fresh one for the next note.
     if (!flower.hasRoom) {
       const res = await api('/api/flowers');
@@ -643,21 +673,18 @@ async function placePetal(e) {
 
 function wireOverlays() {
   document.querySelectorAll('[data-close]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const overlay = b.closest('.overlay');
-      if (overlay) overlay.hidden = true;
-    }),
+    b.addEventListener('click', () => closeOverlay(b.closest('.overlay'))),
   );
   document.querySelectorAll('.overlay').forEach((ov) =>
     ov.addEventListener('click', (e) => {
-      if (e.target === ov) ov.hidden = true;
+      if (e.target === ov) closeOverlay(ov);
     }),
   );
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      $('#reader').hidden = true;
-      $('#composer').hidden = true;
-      $('#about').hidden = true;
+      closeOverlay($('#reader'));
+      closeOverlay($('#composer'));
+      closeOverlay($('#about'));
     }
   });
 
@@ -670,12 +697,7 @@ function wireOverlays() {
   });
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#composeForm').addEventListener('submit', placePetal);
-  $('#composeText').addEventListener('input', (e) => {
-    const left = 280 - e.target.value.length;
-    const counter = $('#counter');
-    counter.hidden = left > 40;
-    if (!counter.hidden) counter.textContent = `${left}`;
-  });
+  $('#composeText').addEventListener('input', updateComposerState);
 
   // "with whom?" softens to "to" or "from" once a direction is chosen.
   $('#composeDirection').addEventListener('change', (e) => {
@@ -691,7 +713,7 @@ function plural(n, one, many) {
 }
 
 async function openAbout() {
-  $('#about').hidden = false;
+  openOverlay($('#about'));
   const el = $('#stats');
   el.innerHTML = '<p class="stat">listening to the garden…</p>';
   const { ok, body } = await api('/api/stats');

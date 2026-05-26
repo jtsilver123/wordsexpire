@@ -14,6 +14,7 @@ const GRACE = 172800; // 2 days a dead petal lingers as a ghost
 const TOTAL = LIFESPAN + GRACE; // beyond this, a petal is soft-deleted
 
 // --- abuse limits ------------------------------------------------------------
+const MIN_TEXT = 2;
 const MAX_TEXT = 280;
 const PETALS_PER_HOUR = 5;
 const REACTIONS_PER_HOUR = 30;
@@ -270,7 +271,7 @@ app.post('/api/flowers/:id/petals', async (c) => {
   if ((body as { website?: string }).website) return c.json({ message: 'Thank you for that.' }, 200);
 
   const text = ((body as { text?: string }).text ?? '').trim();
-  if (!text) return c.json({ message: 'There were no words to leave.' }, 400);
+  if (text.length < MIN_TEXT) return c.json({ message: 'A few more words, perhaps.' }, 400);
   if (text.length > MAX_TEXT) return c.json({ message: 'That was a little too long to hold.' }, 400);
   if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
 

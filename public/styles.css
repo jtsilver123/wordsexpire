@@ -155,6 +155,7 @@ body {
   fill: var(--text);
   pointer-events: auto;
   user-select: none;
+  transition: opacity var(--slow) var(--ease);
 }
 
 /* A petal's full words, revealed on hover. */
@@ -398,6 +399,8 @@ body {
 }
 
 /* ---------- overlays (reading + composing) ---------- */
+/* Open and close are both transitioned via the .open class, so an overlay
+   fades out as gently as it fades in. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -408,7 +411,16 @@ body {
   backdrop-filter: blur(2px);
   z-index: 20;
   padding: 1.5rem;
-  animation: fadeIn var(--slow) var(--ease);
+  opacity: 0;
+  transition: opacity 460ms var(--ease);
+}
+
+.overlay.open {
+  opacity: 1;
+}
+
+.overlay:not(.open) {
+  pointer-events: none;
 }
 
 .card {
@@ -420,18 +432,14 @@ body {
   width: 100%;
   text-align: center;
   position: relative;
-  animation: cardRise var(--slower) var(--ease) both;
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+  transition: opacity 600ms var(--ease), transform 700ms var(--ease);
 }
 
-@keyframes cardRise {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.overlay.open .card {
+  opacity: 1;
+  transform: none;
 }
 
 .petal-text {
@@ -638,6 +646,15 @@ textarea:focus {
   font-family: var(--sans);
   font-size: 0.72rem;
   color: var(--muted);
+  transition: color var(--slow) var(--ease), opacity var(--slow) var(--ease);
+}
+
+.counter.short {
+  opacity: 0.55;
+}
+
+.counter.near {
+  color: var(--accent);
 }
 
 .compose-done {
@@ -671,6 +688,17 @@ textarea:focus {
 
 .text-link:hover {
   color: var(--accent);
+}
+
+.text-link:disabled {
+  opacity: 0.35;
+  color: var(--muted);
+  cursor: default;
+}
+
+.drop:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .place {

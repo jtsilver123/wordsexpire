@@ -37,11 +37,14 @@ jobs:
       - name: Deploy Worker
         run: npx wrangler deploy
 
-      # Set runtime secrets if they were provided. Skipped quietly if absent.
+      # Set runtime secrets if they were provided. These run even if the deploy
+      # step above failed while re-asserting routes: the script itself uploads
+      # first, and putting a secret is an account-level op that never touches
+      # the zone routes endpoint, so it succeeds with the same token.
       - name: Set IP_HASH_SALT
-        if: ${{ env.IP_HASH_SALT != '' }}
+        if: ${{ always() && env.IP_HASH_SALT != '' }}
         run: printf '%s' "$IP_HASH_SALT" | npx wrangler secret put IP_HASH_SALT
 
       - name: Set ADMIN_TOKEN
-        if: ${{ env.ADMIN_TOKEN != '' }}
+        if: ${{ always() && env.ADMIN_TOKEN != '' }}
         run: printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN

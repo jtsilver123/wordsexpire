@@ -689,6 +689,7 @@ function wireOverlays() {
   });
 
   $('#aboutBtn').addEventListener('click', openAbout);
+  $('#leaveBtn').addEventListener('click', () => openComposer());
   $('#compass').addEventListener('click', () => {
     const i = compassTarget >= 0 ? compassTarget : nearestFlowerIndex();
     if (i < 0) return;
@@ -787,6 +788,7 @@ async function start() {
 
   $('#viewport').hidden = false;
   $('#aboutBtn').hidden = false;
+  $('#leaveBtn').hidden = false;
 
   // Arrive gently: start pulled back, then ease in toward the first flower.
   const first = state.flowers[0];

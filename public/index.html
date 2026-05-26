@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=16" />
+    <link rel="stylesheet" href="/styles.css?v=17" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -116,6 +116,7 @@
     <!-- Reading a petal. -->
     <div id="reader" class="overlay" hidden>
       <div class="card reader-card" role="dialog" aria-modal="true">
+        <img class="petal-image" id="petalImage" alt="" hidden />
         <p class="petal-text" id="petalText"></p>
         <p class="petal-context" id="petalContext" hidden></p>
         <p class="petal-spoken" id="petalSpoken" hidden></p>
@@ -210,6 +211,15 @@
                 </select>
               </label>
             </div>
+
+            <div class="image-field">
+              <input type="file" id="composeImage" accept="image/jpeg,image/png,image/gif,image/webp" hidden />
+              <button type="button" class="text-link image-pick" id="imagePick">add an image</button>
+              <div class="image-preview" id="imagePreview" hidden>
+                <img id="imageThumb" alt="your image" />
+                <button type="button" class="text-link image-remove" id="imageRemove">remove</button>
+              </div>
+            </div>
           </details>
 
           <p class="compose-reassure">no name, no account. just you and the pond.</p>
@@ -227,6 +237,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=16" type="module"></script>
+    <script src="/app.js?v=17" type="module"></script>
   </body>
 </html>

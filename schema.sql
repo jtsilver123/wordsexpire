@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS petals (
   medium          TEXT,                     -- how the words passed: in_person, text, call, video, email, letter, other
   direction       TEXT,                     -- 'gave' (said it) or 'received' (heard it)
   relationship    TEXT,                     -- to or from whom: partner, parent, friend, ...
+  image_id        TEXT,                     -- optional image, stored in the images table
   last_renewed_at INTEGER NOT NULL,         -- a reaction resets this to now
   reaction_count  INTEGER NOT NULL DEFAULT 0,
   deleted_at      INTEGER                   -- soft-delete once a petal is long gone
@@ -29,6 +30,8 @@ CREATE TABLE IF NOT EXISTS reactions (
   ip_hash     TEXT NOT NULL,
   created_at  INTEGER NOT NULL
 );
+
+-- Optional images live in R2 (bucket binding IMAGES); petals.image_id holds the key.
 
 -- A light footprint for rate limiting, keyed by a salted hash of the IP.
 CREATE TABLE IF NOT EXISTS rate_events (

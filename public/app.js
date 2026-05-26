@@ -806,6 +806,16 @@ function openReader(petal, pathEl) {
   state.openPetalId = petal.id;
   state.openPetalEl = pathEl;
   history.replaceState(null, '', `/p/${petal.id}`); // a shareable address for this note
+
+  const img = $('#petalImage');
+  if (petal.imageUrl) {
+    img.src = petal.imageUrl;
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+    img.removeAttribute('src');
+  }
+
   $('#petalText').textContent = petal.text;
 
   const context = contextLine(petal);
@@ -873,6 +883,57 @@ function playRenewFx() {
 
 // ---------- leaving a petal ----------
 
+// ---------- optional image ----------
+
+let pendingImage = null; // a downscaled Blob awaiting upload with the next petal
+
+// Shrink and re-encode in the browser so what we store stays small (and EXIF
+// is stripped along the way).
+async function downscaleImage(file, maxDim = 1280) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  if (bmp.close) bmp.close();
+  const toBlob = (type, q) => new Promise((res) => canvas.toBlob(res, type, q));
+  return (await toBlob('image/webp', 0.82)) || (await toBlob('image/jpeg', 0.85));
+}
+
+function clearImage() {
+  pendingImage = null;
+  $('#composeImage').value = '';
+  $('#imagePreview').hidden = true;
+  $('#imageThumb').removeAttribute('src');
+  $('#imagePick').hidden = false;
+}
+
+function setupImage() {
+  $('#imagePick').addEventListener('click', () => $('#composeImage').click());
+  $('#imageRemove').addEventListener('click', clearImage);
+  $('#composeImage').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const blob = await downscaleImage(file);
+      if (!blob) throw new Error('no blob');
+      pendingImage = blob;
+      $('#imageThumb').src = URL.createObjectURL(blob);
+      $('#imagePreview').hidden = false;
+      $('#imagePick').hidden = true;
+      $('#details').open = true;
+    } catch {
+      pendingImage = null;
+      const pick = $('#imagePick');
+      pick.textContent = 'that image would not open';
+      setTimeout(() => (pick.textContent = 'add an image'), 2600);
+    }
+  });
+}
+
 // Keep the counter and the "place it" button in step with what's typed.
 function updateComposerState() {
   const len = $('#composeText').value.length;
@@ -909,6 +970,7 @@ async function openComposer(flower) {
   $('#composeDirection').value = '';
   $('#composeRelationship').value = '';
   $('#whomLabel').textContent = 'with whom?';
+  clearImage();
   $('#details').open = false;
   $('#composeForm').hidden = false;
   $('#composeDone').hidden = true;
@@ -931,6 +993,24 @@ async function placePetal(e) {
   const btn = $('#placeBtn');
   btn.disabled = true;
 
+  // If an image is attached, store it first and carry its key with the note.
+  let imageId;
+  if (pendingImage) {
+    btn.textContent = 'placing…';
+    const up = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': pendingImage.type },
+      body: pendingImage,
+    }).catch(() => null);
+    if (!up || !up.ok) {
+      btn.disabled = false;
+      btn.textContent = 'the image would not attach';
+      setTimeout(() => (btn.textContent = 'place it'), 2600);
+      return;
+    }
+    imageId = (await up.json()).id;
+  }
+
   const { ok, body } = await api(`/api/flowers/${flower.id}/petals`, {
     method: 'POST',
     body: JSON.stringify({
@@ -940,6 +1020,7 @@ async function placePetal(e) {
       medium: $('#composeMedium').value || undefined,
       direction: $('#composeDirection').value || undefined,
       relationship: $('#composeRelationship').value || undefined,
+      imageId,
     }),
   });
 
@@ -949,6 +1030,7 @@ async function placePetal(e) {
     setTimeout(() => (btn.textContent = 'place it'), 2600);
     return;
   }
+  clearImage();
 
   $('#composeForm').hidden = true;
   $('#composeDone').hidden = false;
@@ -1047,6 +1129,7 @@ function wireOverlays() {
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#composeForm').addEventListener('submit', placePetal);
   $('#composeText').addEventListener('input', updateComposerState);
+  setupImage();
 
   // "with whom?" softens to "to" or "from" once a direction is chosen.
   $('#composeDirection').addEventListener('change', (e) => {

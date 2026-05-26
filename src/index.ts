@@ -4,6 +4,7 @@ import { isBlocked } from './profanity';
 type Bindings = {
   DB: D1Database;
   ASSETS: Fetcher;
+  IMAGES: R2Bucket;
   IP_HASH_SALT: string;
   ADMIN_TOKEN: string;
 };
@@ -19,8 +20,19 @@ const MAX_TEXT = 280;
 const PETALS_PER_HOUR = 5;
 const REACTIONS_PER_HOUR = 30;
 const FLOWERS_PER_HOUR = 3;
+const UPLOADS_PER_HOUR = 12;
 const HOUR = 3600;
 const DAY = 86400;
+
+// Images petals may carry. Kept small; the browser downscales before upload.
+const MAX_IMAGE_BYTES = 2_000_000;
+const IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+};
+const IMAGE_KEY = /^[A-Za-z0-9-]+\.(jpg|png|gif|webp)$/;
 
 // Petal colors, rotated softly. The frontend maps these keys to hues.
 const COLORS = ['rose', 'sage', 'lavender', 'gold', 'sky'] as const;
@@ -82,6 +94,7 @@ type PetalRow = {
   medium: string | null;
   direction: string | null;
   relationship: string | null;
+  image_id: string | null;
   last_renewed_at: number;
   reaction_count: number;
 };
@@ -97,6 +110,7 @@ function shapePetal(p: PetalRow, at: number) {
     medium: p.medium,
     direction: p.direction,
     relationship: p.relationship,
+    imageUrl: p.image_id ? `/i/${p.image_id}` : null,
     reactionCount: p.reaction_count,
     aliveness: a,
     // Once aliveness hits zero a petal lingers faintly through the grace window.
@@ -105,7 +119,7 @@ function shapePetal(p: PetalRow, at: number) {
 }
 
 const PETAL_COLUMNS =
-  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, last_renewed_at, reaction_count';
+  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, last_renewed_at, reaction_count';
 
 // Lazily clear petals that have outlived even their grace period.
 async function sweep(db: D1Database, at: number): Promise<void> {
@@ -265,6 +279,7 @@ app.post('/api/flowers/:id/petals', async (c) => {
       medium?: string;
       direction?: string;
       relationship?: string;
+      imageId?: string;
     }>()
     .catch(() => ({}) as Record<string, unknown>);
   // Honeypot: a hidden field humans never fill. Pretend it worked, plant nothing.
@@ -284,6 +299,8 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const medium = clean((body as { medium?: unknown }).medium, MEDIUMS);
   const direction = clean((body as { direction?: unknown }).direction, DIRECTIONS);
   const relationship = clean((body as { relationship?: unknown }).relationship, RELATIONSHIPS);
+  const imageRaw = (body as { imageId?: unknown }).imageId;
+  const imageId = typeof imageRaw === 'string' && IMAGE_KEY.test(imageRaw) ? imageRaw : null;
 
   if (await rateExceeded(c.env.DB, ipHash, 'petal', PETALS_PER_HOUR, HOUR, at)) {
     return c.json({ message: 'You have left several already. Come back in a while.' }, 429);
@@ -296,10 +313,10 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const id = uuid();
   await c.env.DB.prepare(
-    'INSERT INTO petals (id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, last_renewed_at, reaction_count) ' +
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
+    'INSERT INTO petals (id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, last_renewed_at, reaction_count) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
   )
-    .bind(id, flowerId, text, color, at, spokenAt, medium, direction, relationship, at)
+    .bind(id, flowerId, text, color, at, spokenAt, medium, direction, relationship, imageId, at)
     .run();
   await logRate(c.env.DB, ipHash, 'petal', at);
 
@@ -316,6 +333,7 @@ app.post('/api/flowers/:id/petals', async (c) => {
           medium,
           direction,
           relationship,
+          image_id: imageId,
           last_renewed_at: at,
           reaction_count: 0,
         },
@@ -324,6 +342,44 @@ app.post('/api/flowers/:id/petals', async (c) => {
     },
     201,
   );
+});
+
+// Receive one downscaled image, store it in R2, return its key.
+app.post('/api/upload', async (c) => {
+  const at = now();
+  const ipHash = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
+  if (await rateExceeded(c.env.DB, ipHash, 'upload', UPLOADS_PER_HOUR, HOUR, at)) {
+    return c.json({ message: 'That is a lot of images for now. Come back in a while.' }, 429);
+  }
+
+  const contentType = (c.req.header('content-type') || '').split(';')[0].trim();
+  const ext = IMAGE_TYPES[contentType];
+  if (!ext) return c.json({ message: 'That kind of file cannot be left here.' }, 415);
+
+  const buf = await c.req.arrayBuffer();
+  if (buf.byteLength === 0) return c.json({ message: 'The image was empty.' }, 400);
+  if (buf.byteLength > MAX_IMAGE_BYTES) return c.json({ message: 'That image is a little too large.' }, 413);
+
+  const key = `${uuid()}.${ext}`;
+  await c.env.IMAGES.put(key, buf, { httpMetadata: { contentType } });
+  await logRate(c.env.DB, ipHash, 'upload', at);
+  return c.json({ id: key }, 201);
+});
+
+// Serve a stored image.
+app.get('/i/:key', async (c) => {
+  const key = c.req.param('key');
+  if (!IMAGE_KEY.test(key)) return c.notFound();
+  const obj = await c.env.IMAGES.get(key);
+  if (!obj) return c.notFound();
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+      etag: obj.httpEtag,
+    },
+  });
 });
 
 app.post('/api/petals/:id/react', async (c) => {

@@ -846,6 +846,15 @@ body {
   transform: none;
 }
 
+.petal-image {
+  display: block;
+  max-width: 100%;
+  max-height: 40vh;
+  margin: 0 auto 1.4rem;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px -20px rgba(58, 51, 44, 0.45);
+}
+
 .petal-text {
   margin: 0 0 1rem;
   font-size: 1.5rem;
@@ -1100,6 +1109,30 @@ body {
   color: var(--muted);
   opacity: 0.7;
   min-height: 1em;
+}
+
+/* Optional image attachment, inside the context section. */
+.image-field {
+  margin-top: 1.3rem;
+  text-align: center;
+}
+
+.image-pick {
+  font-size: 0.8rem;
+}
+
+.image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 140px;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px -18px rgba(58, 51, 44, 0.45);
 }
 
 /* Quiet reassurance, to make it safe to write something true. */

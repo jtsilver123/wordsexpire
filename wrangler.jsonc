@@ -31,6 +31,14 @@
     }
   ],
 
+  // Optional images petals carry, downscaled in the browser before upload.
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "wordsexpire-images"
+    }
+  ],
+
   "observability": {
     "enabled": true
   }

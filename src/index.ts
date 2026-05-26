@@ -189,6 +189,69 @@ async function ensureOpenFlower(db: D1Database, at: number): Promise<void> {
     .run();
 }
 
+// When a note is removed (or restored), re-pack the living petals so flowers
+// fill from the oldest forward: every flower full except the last, open one.
+// Emptied flowers are removed (their long-gone petals are first reattached to
+// the oldest flower, to satisfy the foreign key); the oldest flower always stays.
+async function compactFlowers(db: D1Database, at: number): Promise<void> {
+  const flowers =
+    (await db.prepare('SELECT id, max_petals FROM flowers ORDER BY created_at ASC').all<{ id: string; max_petals: number }>())
+      .results ?? [];
+  if (flowers.length === 0) {
+    await ensureOpenFlower(db, at);
+    return;
+  }
+  const petals =
+    (
+      await db
+        .prepare('SELECT id, flower_id FROM petals WHERE deleted_at IS NULL ORDER BY created_at ASC')
+        .all<{ id: string; flower_id: string }>()
+    ).results ?? [];
+
+  // A restore can push past the current capacity; grow new flowers to fit.
+  let capacity = flowers.reduce((sum, f) => sum + f.max_petals, 0);
+  let extra = 0;
+  while (capacity < petals.length) {
+    const id = uuid();
+    const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+    await db.prepare('INSERT INTO flowers (id, max_petals, created_at, theme) VALUES (?, 6, ?, ?)').bind(id, at + ++extra, theme).run();
+    flowers.push({ id, max_petals: 6 });
+    capacity += 6;
+  }
+
+  // Fill flowers front-to-back, recording where each petal should move.
+  const counts = new Array<number>(flowers.length).fill(0);
+  const moves: { id: string; flowerId: string }[] = [];
+  let fi = 0;
+  for (const p of petals) {
+    while (fi < flowers.length && counts[fi] >= flowers[fi].max_petals) fi++;
+    if (fi >= flowers.length) break;
+    counts[fi]++;
+    if (p.flower_id !== flowers[fi].id) moves.push({ id: p.id, flowerId: flowers[fi].id });
+  }
+
+  // Keep flowers up to and including the single open one; drop the empties after.
+  let lastNeeded = -1;
+  for (let i = 0; i < flowers.length; i++) if (counts[i] > 0) lastNeeded = i;
+  let keepUntil: number;
+  if (lastNeeded === -1) keepUntil = 0;
+  else if (counts[lastNeeded] >= flowers[lastNeeded].max_petals) keepUntil = Math.min(lastNeeded + 1, flowers.length - 1);
+  else keepUntil = lastNeeded;
+
+  const survivor = flowers[0].id;
+  const stmts: D1PreparedStatement[] = [];
+  for (const m of moves) {
+    stmts.push(db.prepare('UPDATE petals SET flower_id = ? WHERE id = ?').bind(m.flowerId, m.id));
+  }
+  for (let i = keepUntil + 1; i < flowers.length; i++) {
+    stmts.push(db.prepare('UPDATE petals SET flower_id = ? WHERE flower_id = ?').bind(survivor, flowers[i].id));
+    stmts.push(db.prepare('DELETE FROM flowers WHERE id = ?').bind(flowers[i].id));
+  }
+  if (stmts.length) await db.batch(stmts);
+
+  await ensureOpenFlower(db, at);
+}
+
 app.get('/api/flowers', async (c) => {
   const at = now();
   await ensureOpenFlower(c.env.DB, at);
@@ -517,7 +580,10 @@ app.get('/admin/flowers', async (c) => {
 });
 
 app.delete('/admin/petals/:id', async (c) => {
-  await c.env.DB.prepare('UPDATE petals SET deleted_at = ? WHERE id = ?').bind(now(), c.req.param('id')).run();
+  const at = now();
+  await c.env.DB.prepare('UPDATE petals SET deleted_at = ? WHERE id = ?').bind(at, c.req.param('id')).run();
+  // Removing a note frees its slot; re-pack so the flowers stay filled.
+  await compactFlowers(c.env.DB, at);
   return c.json({ ok: true });
 });
 
@@ -623,8 +689,12 @@ app.delete('/admin/reports/:type/:id', async (c) => {
 
 // Restore a wrongly-removed note or reply.
 app.post('/admin/restore/:type/:id', async (c) => {
-  const table = c.req.param('type') === 'comment' ? 'comments' : 'petals';
+  const at = now();
+  const isComment = c.req.param('type') === 'comment';
+  const table = isComment ? 'comments' : 'petals';
   await c.env.DB.prepare(`UPDATE ${table} SET deleted_at = NULL WHERE id = ?`).bind(c.req.param('id')).run();
+  // A restored note needs a slot again; re-pack to make room for it.
+  if (!isComment) await compactFlowers(c.env.DB, at);
   return c.json({ ok: true });
 });
 

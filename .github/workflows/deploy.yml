@@ -11,6 +11,11 @@ on:
       - claude/clever-mendel-Th9C6
   workflow_dispatch: {}
 
+# Only the newest deploy matters; cancel any still in flight.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

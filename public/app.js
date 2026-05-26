@@ -265,6 +265,10 @@ function drawFlowerSvg(flower) {
     if (moved) return;
     openComposer(flower);
   });
+  heart.addEventListener('mouseenter', () =>
+    showTip(flower.hasRoom ? 'click to leave a note' : 'this flower is full', core),
+  );
+  heart.addEventListener('mouseleave', hideTip);
   heart.appendChild(core);
   svg.appendChild(heart);
 
@@ -704,9 +708,9 @@ async function openAbout() {
       `<p class="stat"><span class="n">${plural(s.keptAlive, 'time', 'times')}</span> a note has been kept alive<small>by hands their authors will never meet</small></p>`,
     );
   }
-  if (s.faded > 0) {
-    lines.push(`<p class="stat"><span class="n">${plural(s.faded, 'note has', 'notes have')}</span> quietly faded</p>`);
-  }
+  lines.push(
+    `<p class="stat"><span class="n">${s.faded.toLocaleString()}</span> ${s.faded === 1 ? 'note has' : 'notes have'} expired<small>their words faded for good, unrenewed</small></p>`,
+  );
   if (s.oldestSpokenAt) {
     const year = new Date(s.oldestSpokenAt * 1000).getFullYear();
     lines.push(`<p class="stat">the oldest words still here were spoken in <span class="n">${year}</span></p>`);

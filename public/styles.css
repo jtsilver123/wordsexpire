@@ -1306,6 +1306,64 @@ textarea:focus {
   font-style: italic;
 }
 
+/* Anonymous replies on a petal. */
+.comments-wrap {
+  margin-top: 1.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--hairline);
+  text-align: left;
+}
+
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-height: 26vh;
+  overflow-y: auto;
+}
+
+.comments:empty {
+  display: none;
+}
+
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.comment-text {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.comment-time {
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.comment-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.comment-form textarea {
+  flex: 1;
+  font-size: 1.05rem;
+  resize: none;
+  text-align: left;
+}
+
+.comment-form .text-link {
+  flex: none;
+}
+
 /* Reading-card footer: share and close, side by side. */
 .reader-foot {
   display: flex;
@@ -1313,6 +1371,12 @@ textarea:focus {
   justify-content: center;
   gap: 1.4rem;
   margin-top: 1.6rem;
+}
+
+/* A note with many replies can grow; let the card scroll rather than overflow. */
+#reader .card {
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Honeypot stays out of sight and out of the tab order. */

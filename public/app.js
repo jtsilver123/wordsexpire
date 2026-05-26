@@ -827,6 +827,73 @@ function closeOverlay(el) {
   }
 }
 
+// ---------- comments (anonymous replies) ----------
+
+function ago(sec) {
+  const d = Math.floor(Date.now() / 1000) - sec;
+  if (d < 60) return 'just now';
+  if (d < 3600) return `${Math.floor(d / 60)}m ago`;
+  if (d < 86400) return `${Math.floor(d / 3600)}h ago`;
+  return `${Math.floor(d / 86400)}d ago`;
+}
+
+function renderComments(list) {
+  const el = $('#comments');
+  el.textContent = '';
+  for (const c of list) {
+    const wrap = document.createElement('div');
+    wrap.className = 'comment';
+    const t = document.createElement('p');
+    t.className = 'comment-text';
+    t.textContent = c.text;
+    const m = document.createElement('span');
+    m.className = 'comment-time';
+    m.textContent = ago(c.createdAt);
+    wrap.append(t, m);
+    el.appendChild(wrap);
+  }
+}
+
+async function loadComments(petalId) {
+  renderComments([]);
+  const { ok, body } = await api(`/api/petals/${petalId}/comments`);
+  if (ok && body.comments) renderComments(body.comments);
+  $('#comments').scrollTop = $('#comments').scrollHeight;
+}
+
+async function submitComment(e) {
+  e.preventDefault();
+  const text = $('#commentText').value.trim();
+  if (!text || !state.openPetalId) return;
+  const btn = $('#commentBtn');
+  btn.disabled = true;
+  const { ok, body } = await api(`/api/petals/${state.openPetalId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text, website: $('#commentForm').elements.website.value }),
+  });
+  btn.disabled = false;
+  if (!ok) {
+    btn.textContent = body.message || 'not now';
+    setTimeout(() => (btn.textContent = 'reply'), 2400);
+    return;
+  }
+  $('#commentText').value = '';
+  if (body.comment) {
+    const el = $('#comments');
+    const wrap = document.createElement('div');
+    wrap.className = 'comment';
+    const t = document.createElement('p');
+    t.className = 'comment-text';
+    t.textContent = body.comment.text;
+    const m = document.createElement('span');
+    m.className = 'comment-time';
+    m.textContent = 'just now';
+    wrap.append(t, m);
+    el.appendChild(wrap);
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
 // ---------- reading a petal ----------
 
 function openReader(petal, pathEl) {
@@ -868,6 +935,18 @@ function openReader(petal, pathEl) {
   $('.keep').classList.remove('kept');
   $('#keepLabel').textContent = 'keep alive';
   $('#keepBtn').disabled = false;
+
+  // Replies live with a living petal; a faded one keeps no conversation.
+  const wrap = $('#commentsWrap');
+  if (petal.expired) {
+    wrap.hidden = true;
+  } else {
+    wrap.hidden = false;
+    $('#commentText').value = '';
+    renderComments([]);
+    loadComments(petal.id);
+  }
+
   openOverlay($('#reader'));
 }
 
@@ -1174,6 +1253,7 @@ function wireOverlays() {
     focusOn(p.x, p.y, 1.0);
   });
   $('#keepBtn').addEventListener('click', keepAlive);
+  $('#commentForm').addEventListener('submit', submitComment);
   $('#composeForm').addEventListener('submit', placePetal);
   $('#composeText').addEventListener('input', updateComposerState);
   setupImage();

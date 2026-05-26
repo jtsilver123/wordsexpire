@@ -20,6 +20,8 @@ const PETALS_PER_HOUR = 5;
 const REACTIONS_PER_HOUR = 30;
 const FLOWERS_PER_HOUR = 3;
 const UPLOADS_PER_HOUR = 12;
+const COMMENTS_PER_HOUR = 12;
+const MAX_COMMENT = 280;
 const HOUR = 3600;
 const DAY = 86400;
 
@@ -413,6 +415,50 @@ app.post('/api/petals/:id/react', async (c) => {
   return c.json({ petal: shapePetal({ ...petal, last_renewed_at: at, reaction_count: petal.reaction_count + 1 }, at) });
 });
 
+// Anonymous replies left on a petal.
+app.get('/api/petals/:id/comments', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, text, created_at FROM comments WHERE petal_id = ? AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 200',
+  )
+    .bind(c.req.param('id'))
+    .all<{ id: string; text: string; created_at: number }>();
+  const comments = (results ?? []).map((r) => ({ id: r.id, text: r.text, createdAt: r.created_at }));
+  return c.json({ comments });
+});
+
+app.post('/api/petals/:id/comments', async (c) => {
+  const at = now();
+  const petalId = c.req.param('id');
+  const ipHash = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
+
+  const body = await c.req
+    .json<{ text?: string; website?: string }>()
+    .catch(() => ({}) as { text?: string; website?: string });
+  if (body.website) return c.json({ message: 'Thank you for that.' }, 200); // honeypot
+
+  const text = (body.text ?? '').trim();
+  if (!text) return c.json({ message: 'There were no words to leave.' }, 400);
+  if (text.length > MAX_COMMENT) return c.json({ message: 'That reply was a little too long.' }, 400);
+  if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
+
+  if (await rateExceeded(c.env.DB, ipHash, 'comment', COMMENTS_PER_HOUR, HOUR, at)) {
+    return c.json({ message: 'You have replied to a few already. Come back in a while.' }, 429);
+  }
+
+  const petal = await c.env.DB.prepare('SELECT last_renewed_at FROM petals WHERE id = ? AND deleted_at IS NULL')
+    .bind(petalId)
+    .first<{ last_renewed_at: number }>();
+  if (!petal) return c.json({ message: 'That petal has already gone.' }, 404);
+  if (aliveness(petal.last_renewed_at, at) <= 0) return c.json({ message: 'These words have faded for good.' }, 410);
+
+  const id = uuid();
+  await c.env.DB.prepare('INSERT INTO comments (id, petal_id, text, ip_hash, created_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(id, petalId, text, ipHash, at)
+    .run();
+  await logRate(c.env.DB, ipHash, 'comment', at);
+  return c.json({ comment: { id, text, createdAt: at } }, 201);
+});
+
 // --- admin (bearer token) ----------------------------------------------------
 
 app.use('/admin/*', async (c, next) => {
@@ -435,6 +481,11 @@ app.get('/admin/flowers', async (c) => {
 
 app.delete('/admin/petals/:id', async (c) => {
   await c.env.DB.prepare('UPDATE petals SET deleted_at = ? WHERE id = ?').bind(now(), c.req.param('id')).run();
+  return c.json({ ok: true });
+});
+
+app.delete('/admin/comments/:id', async (c) => {
+  await c.env.DB.prepare('UPDATE comments SET deleted_at = ? WHERE id = ?').bind(now(), c.req.param('id')).run();
   return c.json({ ok: true });
 });
 

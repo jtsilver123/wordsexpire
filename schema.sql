@@ -31,6 +31,18 @@ CREATE TABLE IF NOT EXISTS reactions (
   created_at  INTEGER NOT NULL
 );
 
+-- Anonymous replies left on a petal. No author is recorded, only a salted
+-- hash of the IP, used for rate limiting and moderation.
+CREATE TABLE IF NOT EXISTS comments (
+  id          TEXT PRIMARY KEY,
+  petal_id    TEXT NOT NULL REFERENCES petals(id),
+  text        TEXT NOT NULL,
+  ip_hash     TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  deleted_at  INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_comments_petal ON comments(petal_id, created_at);
+
 -- Optional images live in R2 (bucket binding IMAGES); petals.image_id holds the key.
 
 -- A light footprint for rate limiting, keyed by a salted hash of the IP.

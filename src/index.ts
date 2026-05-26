@@ -526,6 +526,68 @@ app.delete('/admin/comments/:id', async (c) => {
   return c.json({ ok: true });
 });
 
+// A whole picture of the garden for the keeper: the counts that show how the
+// place is being used, every note with its engagement, and the flagged replies.
+app.get('/admin/overview', async (c) => {
+  const at = now();
+  const db = c.env.DB;
+  const live = at - LIFESPAN;
+
+  const one = async (sql: string, ...binds: number[]) =>
+    (await db.prepare(sql).bind(...binds).first<{ n: number }>())?.n ?? 0;
+
+  const stats = {
+    notes: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL'),
+    alive: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?', live),
+    faded: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at < ?', live),
+    removed: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NOT NULL'),
+    examples: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND is_example = 1'),
+    flowers: await one('SELECT COUNT(*) AS n FROM flowers'),
+    revivals: await one('SELECT COALESCE(SUM(reaction_count), 0) AS n FROM petals WHERE deleted_at IS NULL'),
+    replies: await one('SELECT COUNT(*) AS n FROM comments WHERE deleted_at IS NULL'),
+    flaggedItems: await one('SELECT COUNT(*) AS n FROM (SELECT 1 FROM reports GROUP BY target_type, target_id)'),
+    flags: await one('SELECT COUNT(*) AS n FROM reports'),
+    mostRevived: await one('SELECT COALESCE(MAX(reaction_count), 0) AS n FROM petals WHERE deleted_at IS NULL'),
+  };
+  const oldest = (await db.prepare('SELECT MIN(spoken_at) AS t FROM petals WHERE deleted_at IS NULL').first<{ t: number | null }>())
+    ?.t ?? null;
+
+  const { results } = await db
+    .prepare(
+      `SELECT ${PETAL_COLUMNS}, deleted_at,
+         (SELECT COUNT(*) FROM comments cm WHERE cm.petal_id = petals.id AND cm.deleted_at IS NULL) AS comment_count,
+         (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'petal' AND r.target_id = petals.id) AS report_count
+       FROM petals ORDER BY created_at DESC LIMIT 1000`,
+    )
+    .all<PetalRow & { deleted_at: number | null; comment_count: number; report_count: number }>();
+  const notes = (results ?? []).map((p) => ({
+    ...shapePetal(p, at),
+    removed: p.deleted_at != null,
+    commentCount: p.comment_count,
+    reportCount: p.report_count,
+  }));
+
+  const rc = await db
+    .prepare(
+      `SELECT c.id, c.text, c.created_at, c.deleted_at, c.petal_id,
+         (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'comment' AND r.target_id = c.id) AS report_count
+       FROM comments c
+       WHERE c.id IN (SELECT target_id FROM reports WHERE target_type = 'comment')
+       ORDER BY c.created_at DESC LIMIT 200`,
+    )
+    .all<{ id: string; text: string; created_at: number; deleted_at: number | null; petal_id: string; report_count: number }>();
+  const reportedComments = (rc.results ?? []).map((r) => ({
+    id: r.id,
+    text: r.text,
+    createdAt: r.created_at,
+    removed: r.deleted_at != null,
+    petalId: r.petal_id,
+    reportCount: r.report_count,
+  }));
+
+  return c.json({ stats: { ...stats, oldestSpokenAt: oldest }, notes, reportedComments });
+});
+
 // The review queue: flagged notes and replies, with their words and counts.
 app.get('/admin/reports', async (c) => {
   const { results } = await c.env.DB.prepare(

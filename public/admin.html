@@ -4,15 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>WordsExpire · review</title>
+    <title>WordsExpire · the garden, tended</title>
     <style>
       :root {
         --bg: #f5efe6;
         --surface: #fbf7f1;
+        --surface-2: #f3ece1;
         --text: #3a332c;
         --muted: #8c8278;
         --accent: #b26f5c;
-        --line: rgba(58, 51, 44, 0.14);
+        --gold: #b89441;
+        --rose: #b6566b;
+        --line: rgba(58, 51, 44, 0.13);
+        --serif: Georgia, 'Times New Roman', serif;
+        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
       * { box-sizing: border-box; }
       body {
@@ -20,58 +25,299 @@
         min-height: 100vh;
         background: var(--bg);
         color: var(--text);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family: var(--sans);
         font-size: 15px;
-        padding: 2rem 1rem 4rem;
+        padding: 2.4rem 1.1rem 5rem;
       }
-      .wrap { max-width: 40rem; margin: 0 auto; }
-      h1 { font-weight: 500; font-size: 1.3rem; letter-spacing: 0.04em; }
-      .bar { display: flex; gap: 0.6rem; margin: 1rem 0 1.6rem; }
+      .wrap { max-width: 52rem; margin: 0 auto; }
+      h1 { font-weight: 500; font-size: 1.5rem; letter-spacing: 0.02em; margin: 0; }
+      .sub { color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+
+      .bar { display: flex; gap: 0.6rem; margin: 1.4rem 0 1.2rem; }
       input {
-        flex: 1; padding: 0.6rem 0.8rem; border: 1px solid var(--line);
-        border-radius: 10px; background: var(--surface); color: var(--text); font-size: 1rem;
+        flex: 1; padding: 0.6rem 0.85rem; border: 1px solid var(--line);
+        border-radius: 11px; background: var(--surface); color: var(--text); font-size: 1rem;
       }
+      input:focus { outline: none; border-color: var(--accent); }
       button {
         border: 1px solid var(--line); background: var(--surface); color: var(--text);
-        border-radius: 10px; padding: 0.45rem 0.8rem; cursor: pointer; font-size: 0.85rem;
+        border-radius: 10px; padding: 0.45rem 0.85rem; cursor: pointer; font-size: 0.82rem;
+        font-family: var(--sans); transition: border-color 0.15s, color 0.15s;
       }
       button:hover { border-color: var(--accent); color: var(--accent); }
-      .item {
-        background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-        padding: 1rem 1.1rem; margin-bottom: 0.9rem;
+      .note-text-link { color: var(--accent); }
+
+      .out { color: var(--muted); }
+
+      /* stats */
+      .hero {
+        font-family: var(--serif); font-size: 1.15rem; line-height: 1.6;
+        color: var(--text); margin: 0.4rem 0 1.4rem;
       }
-      .meta { font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
-      .meta .flag { color: var(--accent); }
-      .meta .removed { color: #a23; }
-      .text { font-family: Georgia, serif; font-size: 1.1rem; line-height: 1.5; margin-bottom: 0.8rem; }
-      .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-      .note { color: var(--muted); }
+      .hero small { display: block; font-family: var(--sans); font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+      .stats {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(8.2rem, 1fr));
+        gap: 0.7rem; margin-bottom: 2.4rem;
+      }
+      .stat {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+        padding: 0.95rem 1rem;
+      }
+      .stat .n { font-size: 1.7rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
+      .stat .l { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 0.3rem; }
+      .stat .s { font-size: 0.74rem; color: var(--muted); margin-top: 0.25rem; }
+      .stat.flag .n { color: var(--rose); }
+      .stat.kept .n { color: var(--gold); }
+
+      section { margin-bottom: 2.4rem; }
+      .sec-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.9rem; }
+      .sec-head h2 { font-size: 1.05rem; font-weight: 500; letter-spacing: 0.02em; margin: 0; }
+      .sec-head .c { font-size: 0.78rem; color: var(--muted); }
+
+      /* notes */
+      .note {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+        padding: 1rem 1.15rem; margin-bottom: 0.85rem;
+      }
+      .note.removed { opacity: 0.62; }
+      .note.flagged { border-color: rgba(182, 86, 107, 0.4); }
+      .note-meta { font-size: 0.72rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.5rem; }
+      .note-text { font-family: var(--serif); font-size: 1.12rem; line-height: 1.5; }
+      .note.removed .note-text { text-decoration: line-through; text-decoration-color: rgba(58,51,44,0.3); }
+      .reply-text { font-size: 1.02rem; }
+      .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; }
+      .tag {
+        font-size: 0.68rem; letter-spacing: 0.03em; padding: 0.16rem 0.5rem;
+        border-radius: 999px; background: var(--surface-2); color: var(--muted);
+        border: 1px solid var(--line);
+      }
+      .tag.flag { background: rgba(182, 86, 107, 0.12); color: var(--rose); border-color: rgba(182,86,107,0.25); }
+      .tag.kept { background: rgba(184, 148, 65, 0.14); color: var(--gold); border-color: rgba(184,148,65,0.28); }
+      .tag.reply { background: rgba(178, 111, 92, 0.12); color: var(--accent); border-color: rgba(178,111,92,0.22); }
+      .tag.removed { color: var(--rose); }
+      .actions { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.85rem; }
+
+      /* filters */
+      .filters { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+      .chip {
+        font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 999px;
+        background: transparent; border: 1px solid var(--line);
+      }
+      .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .chip.on:hover { color: #fff; }
+      .empty { color: var(--muted); font-style: italic; padding: 0.4rem 0; }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>review</h1>
+      <h1>the garden, tended</h1>
+      <div class="sub">a quiet view of how the garden is being kept. enter the password to look.</div>
       <div class="bar">
         <input id="token" type="password" placeholder="password" autocomplete="off" />
-        <button id="load">load</button>
+        <button id="load">look</button>
       </div>
-      <div id="out" class="note">enter the password and load the flagged notes.</div>
+      <div id="out" class="out">the garden is private. enter the password above.</div>
+      <div id="board" hidden></div>
     </div>
+
     <script>
       const $ = (s) => document.querySelector(s);
       const hdr = () => ({ Authorization: 'Bearer ' + $('#token').value });
+      let data = null;
+      let filter = 'all';
+
+      const MEDIUM = {
+        in_person: 'in person', text: 'over text', call: 'on a call',
+        video: 'over video', email: 'by email', letter: 'in a letter', other: '',
+      };
+      const REL = {
+        mother: 'a mother', father: 'a father', daughter: 'a daughter', son: 'a son',
+        sister: 'a sister', brother: 'a brother', wife: 'a wife', husband: 'a husband',
+        partner: 'a partner', grandmother: 'a grandmother', grandfather: 'a grandfather',
+        friend: 'a friend', stranger: 'a stranger', myself: 'myself', someone_else: 'someone',
+      };
+
+      const DAY = 86400;
+      function relTime(sec) {
+        if (!sec) return '';
+        const d = Math.floor((Date.now() / 1000 - sec) / DAY);
+        if (d <= 0) return 'today';
+        if (d === 1) return 'yesterday';
+        if (d < 30) return d + ' days ago';
+        return new Date(sec * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      function dateStr(sec) {
+        return sec ? new Date(sec * 1000).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '';
+      }
+      function contextLine(n) {
+        const bits = [];
+        if (n.direction === 'gave') bits.push('said');
+        else if (n.direction === 'received') bits.push('heard');
+        if (n.relationship && REL[n.relationship]) bits.push((n.direction === 'received' ? 'from ' : 'to ') + REL[n.relationship]);
+        if (n.medium && MEDIUM[n.medium]) bits.push(MEDIUM[n.medium]);
+        const spoken = relTime(n.spokenAt);
+        return [bits.join(' '), spoken].filter(Boolean).join(' · ');
+      }
+
+      function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+      }
 
       async function act(method, path) {
         const r = await fetch(path, { method, headers: hdr() });
         if (r.ok) load();
       }
 
+      function statCard(n, label, sub, cls) {
+        const c = el('div', 'stat' + (cls ? ' ' + cls : ''));
+        c.appendChild(el('div', 'n', n.toLocaleString()));
+        c.appendChild(el('div', 'l', label));
+        if (sub) c.appendChild(el('div', 's', sub));
+        return c;
+      }
+
+      function noteCard(n, opts) {
+        opts = opts || {};
+        const card = el('div', 'note' + (n.removed ? ' removed' : '') + (n.reportCount > 0 && !opts.reply ? ' flagged' : ''));
+
+        const meta = el('div', 'note-meta');
+        meta.textContent = opts.reply ? 'reply · ' + relTime(n.createdAt) : contextLine(n) || relTime(n.createdAt);
+        card.appendChild(meta);
+
+        card.appendChild(el('div', 'note-text' + (opts.reply ? ' reply-text' : ''), n.text || '(empty)'));
+
+        const tags = el('div', 'tags');
+        if (n.reportCount > 0) tags.appendChild(el('span', 'tag flag', '⚑ ' + n.reportCount + (n.reportCount === 1 ? ' flag' : ' flags')));
+        if (!opts.reply && n.reactionCount > 0) tags.appendChild(el('span', 'tag kept', 'kept alive ×' + n.reactionCount));
+        if (!opts.reply && n.commentCount > 0) tags.appendChild(el('span', 'tag reply', n.commentCount + (n.commentCount === 1 ? ' reply' : ' replies')));
+        if (!opts.reply && n.expired && !n.removed) tags.appendChild(el('span', 'tag', 'faded'));
+        if (!opts.reply && n.isExample) tags.appendChild(el('span', 'tag', 'example'));
+        if (n.removed) tags.appendChild(el('span', 'tag removed', 'removed'));
+        if (tags.childElementCount) card.appendChild(tags);
+
+        const actions = el('div', 'actions');
+        const type = opts.reply ? 'comment' : 'petal';
+        const base = opts.reply ? '/admin/comments/' : '/admin/petals/';
+        if (n.removed) {
+          const b = el('button', null, 'restore');
+          b.onclick = () => act('POST', '/admin/restore/' + type + '/' + n.id);
+          actions.appendChild(b);
+        } else {
+          const b = el('button', null, 'remove');
+          b.onclick = () => act('DELETE', base + n.id);
+          actions.appendChild(b);
+        }
+        if (n.reportCount > 0) {
+          const b = el('button', null, 'dismiss flags');
+          b.onclick = () => act('DELETE', '/admin/reports/' + type + '/' + n.id);
+          actions.appendChild(b);
+        }
+        card.appendChild(actions);
+        return card;
+      }
+
+      function section(title, count) {
+        const s = el('section');
+        const h = el('div', 'sec-head');
+        h.appendChild(el('h2', null, title));
+        if (count != null) h.appendChild(el('span', 'c', count + (count === 1 ? ' note' : ' notes')));
+        s.appendChild(h);
+        return s;
+      }
+
+      function render() {
+        const board = $('#board');
+        board.textContent = '';
+        const s = data.stats;
+
+        const hero = el('div', 'hero');
+        hero.appendChild(document.createTextNode(
+          `${s.notes.toLocaleString()} notes are growing across ${s.flowers.toLocaleString()} ${s.flowers === 1 ? 'flower' : 'flowers'}, kept alive ${s.revivals.toLocaleString()} ${s.revivals === 1 ? 'time' : 'times'}.`,
+        ));
+        if (s.oldestSpokenAt) hero.appendChild(el('small', null, 'the oldest memory here reaches back to ' + dateStr(s.oldestSpokenAt) + '.'));
+        board.appendChild(hero);
+
+        const grid = el('div', 'stats');
+        grid.appendChild(statCard(s.alive, 'living notes', 'of ' + s.notes + ' total'));
+        grid.appendChild(statCard(s.revivals, 'kept alive', 'most: ×' + s.mostRevived, 'kept'));
+        grid.appendChild(statCard(s.replies, 'replies'));
+        grid.appendChild(statCard(s.flowers, 'flowers'));
+        grid.appendChild(statCard(s.faded, 'faded', 'gone quiet'));
+        grid.appendChild(statCard(s.flaggedItems, 'flagged', s.flags + ' total ' + (s.flags === 1 ? 'flag' : 'flags'), 'flag'));
+        board.appendChild(grid);
+
+        // needs attention
+        const flaggedNotes = data.notes.filter((n) => n.reportCount > 0);
+        const flaggedReplies = (data.reportedComments || []).filter((r) => r.reportCount > 0);
+        if (flaggedNotes.length || flaggedReplies.length) {
+          const sec = section('needs attention', flaggedNotes.length + flaggedReplies.length);
+          flaggedNotes.forEach((n) => sec.appendChild(noteCard(n)));
+          flaggedReplies.forEach((r) => sec.appendChild(noteCard(r, { reply: true })));
+          board.appendChild(sec);
+        }
+
+        // most kept alive
+        const top = data.notes
+          .filter((n) => n.reactionCount > 0 && !n.removed)
+          .sort((a, b) => b.reactionCount - a.reactionCount)
+          .slice(0, 6);
+        if (top.length) {
+          const sec = section('kept most alive');
+          top.forEach((n) => sec.appendChild(noteCard(n)));
+          board.appendChild(sec);
+        }
+
+        // all notes, filterable
+        const sec = el('section');
+        const h = el('div', 'sec-head');
+        h.appendChild(el('h2', null, 'every note'));
+        sec.appendChild(h);
+
+        const filters = el('div', 'filters');
+        const defs = [
+          ['all', 'all', () => true],
+          ['flagged', 'flagged', (n) => n.reportCount > 0],
+          ['kept', 'kept alive', (n) => n.reactionCount > 0],
+          ['faded', 'faded', (n) => n.expired && !n.removed],
+          ['removed', 'removed', (n) => n.removed],
+        ];
+        const listWrap = el('div');
+        function paint() {
+          const def = defs.find((d) => d[0] === filter) || defs[0];
+          const rows = data.notes.filter(def[2]);
+          listWrap.textContent = '';
+          if (!rows.length) {
+            listWrap.appendChild(el('div', 'empty', 'nothing here.'));
+          } else {
+            rows.forEach((n) => listWrap.appendChild(noteCard(n)));
+          }
+          filters.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.f === filter));
+        }
+        defs.forEach((d) => {
+          const count = d[0] === 'all' ? data.notes.length : data.notes.filter(d[2]).length;
+          const chip = el('button', 'chip', d[1] + ' (' + count + ')');
+          chip.dataset.f = d[0];
+          chip.onclick = () => { filter = d[0]; paint(); };
+          filters.appendChild(chip);
+        });
+        sec.appendChild(filters);
+        sec.appendChild(listWrap);
+        board.appendChild(sec);
+        paint();
+      }
+
       async function load() {
         const out = $('#out');
-        out.textContent = 'loading…';
+        const board = $('#board');
+        out.hidden = false;
+        board.hidden = true;
+        out.textContent = 'looking…';
         let res;
         try {
-          res = await fetch('/admin/reports', { headers: hdr() });
+          res = await fetch('/admin/overview', { headers: hdr() });
         } catch {
           out.textContent = 'network error.';
           return;
@@ -80,50 +326,14 @@
           out.textContent = res.status === 401 ? 'wrong password.' : 'error ' + res.status;
           return;
         }
-        const { reports } = await res.json();
-        out.innerHTML = '';
-        if (!reports.length) {
-          out.textContent = 'nothing flagged. the garden is quiet.';
+        data = await res.json();
+        if (!data.notes.length) {
+          out.textContent = 'the garden is empty. nothing planted yet.';
           return;
         }
-        for (const it of reports) {
-          const card = document.createElement('div');
-          card.className = 'item';
-          const meta = document.createElement('div');
-          meta.className = 'meta';
-          meta.innerHTML =
-            it.type +
-            ' · <span class="flag">' +
-            it.count +
-            (it.count === 1 ? ' flag' : ' flags') +
-            '</span>' +
-            (it.removed ? ' · <span class="removed">removed</span>' : '');
-          const text = document.createElement('div');
-          text.className = 'text';
-          text.textContent = it.text;
-          const actions = document.createElement('div');
-          actions.className = 'actions';
-
-          const base = it.type === 'comment' ? '/admin/comments/' : '/admin/petals/';
-          if (it.removed) {
-            const restore = document.createElement('button');
-            restore.textContent = 'restore';
-            restore.onclick = () => act('POST', '/admin/restore/' + it.type + '/' + it.id);
-            actions.appendChild(restore);
-          } else {
-            const remove = document.createElement('button');
-            remove.textContent = 'remove';
-            remove.onclick = () => act('DELETE', base + it.id);
-            actions.appendChild(remove);
-          }
-          const dismiss = document.createElement('button');
-          dismiss.textContent = 'dismiss flags';
-          dismiss.onclick = () => act('DELETE', '/admin/reports/' + it.type + '/' + it.id);
-          actions.appendChild(dismiss);
-
-          card.append(meta, text, actions);
-          out.appendChild(card);
-        }
+        out.hidden = true;
+        board.hidden = false;
+        render();
       }
 
       $('#load').addEventListener('click', load);

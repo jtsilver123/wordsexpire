@@ -1921,15 +1921,17 @@ textarea:focus {
   .wander {
     bottom: 3.9rem;
   }
-  /* Centered above the wander link so it never sits under the "leave a note"
-     button, which is centered along the bottom on narrow screens. */
+  /* Back in the bottom-right corner, but stacked onto two lines so it stays
+     narrow and clears the centered "leave a note" button on small screens. */
   .credit {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-    bottom: 6.4rem;
+    right: 0.9rem;
+    bottom: 0.9rem;
     font-size: 0.62rem;
-    text-align: center;
+    text-align: right;
+    line-height: 1.35;
+  }
+  .credit-line {
+    display: block;
   }
   /* Drop the hint below the logo and the garden link so they never overlap. */
   .hint {

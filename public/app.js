@@ -977,6 +977,7 @@ function openReader(petal, pathEl) {
   $('#petalText').textContent = petal.text;
   $('#petalText').classList.toggle('faded', petal.expired);
   $('#petalFadedNote').hidden = !petal.expired;
+  $('#petalExample').hidden = !petal.isExample;
   // An expired petal cannot be kept alive; hide the offer entirely.
   $('.keep').hidden = petal.expired;
 
@@ -1432,11 +1433,11 @@ function openBook() {
     t.className = 'book-text';
     t.textContent = p.text;
     row.appendChild(t);
-    const ctx = contextLine(p);
-    if (ctx) {
+    const metaText = [p.isExample ? 'example' : null, contextLine(p) || null].filter(Boolean).join(' · ');
+    if (metaText) {
       const m = document.createElement('p');
       m.className = 'book-meta';
-      m.textContent = ctx;
+      m.textContent = metaText;
       row.appendChild(m);
     }
     row.addEventListener('click', () => {

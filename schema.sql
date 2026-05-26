@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS petals (
   direction       TEXT,                     -- 'gave' (said it) or 'received' (heard it)
   relationship    TEXT,                     -- to or from whom: partner, parent, friend, ...
   image_id        TEXT,                     -- optional image, stored in the images table
+  is_example      INTEGER NOT NULL DEFAULT 0, -- a seeded example, not a real submission
   last_renewed_at INTEGER NOT NULL,         -- a reaction resets this to now
   reaction_count  INTEGER NOT NULL DEFAULT 0,
   deleted_at      INTEGER                   -- soft-delete once a petal is long gone

@@ -96,6 +96,7 @@ type PetalRow = {
   direction: string | null;
   relationship: string | null;
   image_id: string | null;
+  is_example: number;
   last_renewed_at: number;
   reaction_count: number;
 };
@@ -112,6 +113,7 @@ function shapePetal(p: PetalRow, at: number) {
     direction: p.direction,
     relationship: p.relationship,
     imageUrl: p.image_id ? `/i/${p.image_id}` : null,
+    isExample: !!p.is_example,
     reactionCount: p.reaction_count,
     aliveness: a,
     // Once aliveness hits zero the petal has expired: it stays on the flower,
@@ -121,7 +123,7 @@ function shapePetal(p: PetalRow, at: number) {
 }
 
 const PETAL_COLUMNS =
-  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, last_renewed_at, reaction_count';
+  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, is_example, last_renewed_at, reaction_count';
 
 async function rateExceeded(
   db: D1Database,
@@ -327,6 +329,7 @@ app.post('/api/flowers/:id/petals', async (c) => {
           direction,
           relationship,
           image_id: imageId,
+          is_example: 0,
           last_renewed_at: at,
           reaction_count: 0,
         },

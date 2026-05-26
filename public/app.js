@@ -854,10 +854,16 @@ function renderComments(list) {
   }
 }
 
+function setRepliesSummary(n) {
+  $('#repliesSummary').textContent = n > 0 ? `${n} ${n === 1 ? 'reply' : 'replies'}` : 'leave a reply';
+}
+
 async function loadComments(petalId) {
   renderComments([]);
+  setRepliesSummary(0);
   const { ok, body } = await api(`/api/petals/${petalId}/comments`);
   if (ok && body.comments) renderComments(body.comments);
+  setRepliesSummary($('#comments').childElementCount);
   $('#comments').scrollTop = $('#comments').scrollHeight;
 }
 
@@ -891,6 +897,7 @@ async function submitComment(e) {
     wrap.append(t, m);
     el.appendChild(wrap);
     el.scrollTop = el.scrollHeight;
+    setRepliesSummary(el.childElementCount);
   }
 }
 
@@ -938,13 +945,13 @@ function openReader(petal, pathEl) {
   $('#keepBtn').disabled = false;
 
   // Replies live with a living petal; a faded one keeps no conversation.
-  const wrap = $('#commentsWrap');
+  const replies = $('#repliesWrap');
   if (petal.expired) {
-    wrap.hidden = true;
+    replies.hidden = true;
   } else {
-    wrap.hidden = false;
+    replies.hidden = false;
+    replies.open = false; // tucked away until asked for
     $('#commentText').value = '';
-    renderComments([]);
     loadComments(petal.id);
   }
 
@@ -1420,6 +1427,14 @@ function setupSound() {
 
 // ---------- start ----------
 
+// The quieter, secondary controls appear only once the visitor begins.
+let chromeRevealed = false;
+function revealChrome() {
+  if (chromeRevealed) return;
+  chromeRevealed = true;
+  for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#credit', '#sound']) $(sel).hidden = false;
+}
+
 async function start() {
   wireWorld();
   wireOverlays();
@@ -1428,14 +1443,15 @@ async function start() {
   const { ok, body } = await api('/api/flowers');
   if (ok && body.flowers) setFlowers(body.flowers);
 
+  // On arrival, show only the pond and the one invitation. The rest of the
+  // chrome fades in once the visitor first reaches into the garden.
   $('#viewport').hidden = false;
-  $('#logo').hidden = false;
-  $('#aboutBtn').hidden = false;
   $('#leaveBtn').hidden = false;
-  $('#wanderBtn').hidden = false;
-  $('#credit').hidden = false;
-  $('#sound').hidden = false;
   setupSound();
+  ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((ev) =>
+    window.addEventListener(ev, revealChrome, { once: true, passive: true }),
+  );
+  setTimeout(revealChrome, 6000);
 
   // A shared link drifts straight to its note; otherwise we arrive at the first.
   if (!openFromPath()) {

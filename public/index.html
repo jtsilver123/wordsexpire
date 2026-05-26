@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=24" />
+    <link rel="stylesheet" href="/styles.css?v=25" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -138,8 +138,9 @@
           <span class="keep-label" id="keepLabel">keep alive</span>
         </div>
 
-        <!-- Anonymous replies. -->
-        <div class="comments-wrap" id="commentsWrap" hidden>
+        <!-- Anonymous replies, tucked behind a toggle. -->
+        <details class="replies" id="repliesWrap" hidden>
+          <summary id="repliesSummary">leave a reply</summary>
           <div class="comments" id="comments"></div>
           <form class="comment-form" id="commentForm" autocomplete="off">
             <div class="gate" aria-hidden="true">
@@ -148,7 +149,7 @@
             <textarea id="commentText" rows="2" maxlength="280" aria-label="leave a quiet reply"></textarea>
             <button type="submit" class="text-link" id="commentBtn">reply</button>
           </form>
-        </div>
+        </details>
 
         <div class="reader-foot">
           <button type="button" class="text-link" id="shareBtn">share this note</button>
@@ -251,6 +252,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=24" type="module"></script>
+    <script src="/app.js?v=25" type="module"></script>
   </body>
 </html>

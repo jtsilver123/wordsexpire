@@ -35,7 +35,7 @@ body {
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
   /* The gardener's watering can, idle everywhere by default. */
-  cursor: url('/cursor-can.svg') 5 11, default;
+  cursor: url('/cursor-can.svg?v=2') 5 11, default;
 }
 
 /* Form fields keep their normal cursors so typing stays usable. */
@@ -1532,5 +1532,5 @@ textarea:focus {
 .compass,
 .sound-toggle,
 .text-link {
-  cursor: url('/cursor-can-pour.svg') 5 11, pointer;
+  cursor: url('/cursor-can-pour.svg?v=2') 5 11, pointer;
 }

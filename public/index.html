@@ -8,13 +8,15 @@
       name="description"
       content="A quiet garden. Leave a small note. It will fade unless others keep it alive."
     />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=9" />
+    <link rel="stylesheet" href="/styles.css?v=10" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -32,6 +34,23 @@
       <div id="ripples" class="ripples"></div>
       <div id="world" class="world"></div>
     </div>
+
+    <!-- Wordmark, top-left. Clicking it drifts back to the first flower. -->
+    <button type="button" class="logo" id="logo" hidden aria-label="WordsExpire, back to the start">
+      <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <g transform="translate(16 16)">
+          <g fill="#d4a09a">
+            <ellipse rx="4.4" ry="7.4" cy="-8.4" transform="rotate(0)" />
+            <ellipse rx="4.4" ry="7.4" cy="-8.4" transform="rotate(72)" />
+            <ellipse rx="4.4" ry="7.4" cy="-8.4" transform="rotate(144)" />
+            <ellipse rx="4.4" ry="7.4" cy="-8.4" transform="rotate(216)" />
+            <ellipse rx="4.4" ry="7.4" cy="-8.4" transform="rotate(288)" />
+          </g>
+          <circle r="4.6" fill="#d3bf86" />
+        </g>
+      </svg>
+      <span class="logo-word">wordsexpire</span>
+    </button>
 
     <button type="button" class="corner-link" id="aboutBtn" hidden>the garden</button>
 
@@ -170,6 +189,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=9" type="module"></script>
+    <script src="/app.js?v=10" type="module"></script>
   </body>
 </html>

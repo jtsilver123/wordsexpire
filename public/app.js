@@ -67,11 +67,21 @@ function hexToRgb(hex) {
 }
 
 // Blend a petal's color toward warm gray as it loses aliveness.
-function fadeColor(hex, aliveness) {
+function fadeRgb(hex, aliveness) {
   const [r, g, b] = hexToRgb(hex);
   const t = (1 - clamp(aliveness, 0, 1)) * 0.7;
-  const mix = (c, w) => Math.round(c + (w - c) * t);
-  return `rgb(${mix(r, WILTED[0])}, ${mix(g, WILTED[1])}, ${mix(b, WILTED[2])})`;
+  return [
+    Math.round(r + (WILTED[0] - r) * t),
+    Math.round(g + (WILTED[1] - g) * t),
+    Math.round(b + (WILTED[2] - b) * t),
+  ];
+}
+function mixRgb(a, b, t) {
+  return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
+}
+const rgbStr = (a) => `rgb(${a[0]}, ${a[1]}, ${a[2]})`;
+function fadeColor(hex, aliveness) {
+  return rgbStr(fadeRgb(hex, aliveness));
 }
 
 function isBackdated(petal) {
@@ -174,11 +184,21 @@ function drawFlowerSvg(flower) {
   svg.setAttribute('aria-label', 'a flower holding small notes');
 
   const defs = makeEl('defs');
-  const grad = makeEl('radialGradient', { id: `heart-${flower.id}` });
-  grad.appendChild(makeEl('stop', { offset: '0%', 'stop-color': '#efe2c8' }));
-  grad.appendChild(makeEl('stop', { offset: '100%', 'stop-color': '#d9c99e' }));
-  defs.appendChild(grad);
   svg.appendChild(defs);
+
+  // A soft warm glow behind the bloom, for a painterly, lit-from-within feel.
+  const halo = makeEl('radialGradient', { id: `halo-${flower.id}` });
+  halo.appendChild(makeEl('stop', { offset: '0%', 'stop-color': 'rgba(247,236,206,0.55)' }));
+  halo.appendChild(makeEl('stop', { offset: '100%', 'stop-color': 'rgba(247,236,206,0)' }));
+  defs.appendChild(halo);
+  svg.appendChild(makeEl('circle', { cx, cy, r: 150, fill: `url(#halo-${flower.id})` }));
+
+  // The glowing center.
+  const heartGrad = makeEl('radialGradient', { id: `heart-${flower.id}` });
+  heartGrad.appendChild(makeEl('stop', { offset: '0%', 'stop-color': '#f6ead0' }));
+  heartGrad.appendChild(makeEl('stop', { offset: '55%', 'stop-color': '#e3cf9c' }));
+  heartGrad.appendChild(makeEl('stop', { offset: '100%', 'stop-color': '#c9a86a' }));
+  defs.appendChild(heartGrad);
 
   const sway = makeEl('g', { class: 'flower-sway' });
   svg.appendChild(sway);
@@ -193,18 +213,45 @@ function drawFlowerSvg(flower) {
     const g = makeEl('g', { transform: `translate(${cx} ${cy}) rotate(${angle})` });
 
     if (petal) {
+      const base = fadeRgb(COLORS[petal.color] || COLORS.rose, petal.aliveness);
+      const deep = mixRgb(base, [104, 78, 66], 0.42); // shaded base
+      const light = mixRgb(base, [255, 251, 240], 0.55); // sunlit tip
+      const len = 104 + seeded(petal.id, 1) * 26;
+
+      // A gradient running base-to-tip gives each petal painterly dimension.
+      const pg = makeEl('linearGradient', {
+        id: `pg-${flower.id}-${i}`,
+        gradientUnits: 'userSpaceOnUse',
+        x1: 0,
+        y1: 0,
+        x2: 0,
+        y2: -len,
+      });
+      pg.appendChild(makeEl('stop', { offset: '0%', 'stop-color': rgbStr(deep) }));
+      pg.appendChild(makeEl('stop', { offset: '55%', 'stop-color': rgbStr(base) }));
+      pg.appendChild(makeEl('stop', { offset: '100%', 'stop-color': rgbStr(light) }));
+      defs.appendChild(pg);
+
+      // A fuller petal sitting just behind, for depth.
+      const under = makeEl('path', {
+        d: petalPath(`${petal.id}-u`),
+        fill: rgbStr(deep),
+        transform: 'scale(1.13)',
+      });
+      under.style.opacity = petal.isGhost ? '0.1' : String(0.32 * petal.aliveness + 0.12);
+
       const path = makeEl('path', {
         d: petalPath(petal.id),
         class: 'petal',
-        fill: fadeColor(COLORS[petal.color] || COLORS.rose, petal.aliveness),
-        stroke: 'rgba(58,51,44,0.10)',
-        'stroke-width': '1',
+        fill: `url(#pg-${flower.id}-${i})`,
+        stroke: rgbStr(deep),
+        'stroke-width': '0.75',
+        'stroke-opacity': '0.35',
       });
-      path.style.opacity = petal.isGhost ? '0.14' : String(0.4 + 0.6 * petal.aliveness);
+      path.style.opacity = petal.isGhost ? '0.16' : String(0.5 + 0.5 * petal.aliveness);
       path.dataset.petalId = petal.id;
 
       // A truncated preview, kept upright; the whole note waits on hover or touch.
-      const len = 104 + seeded(petal.id, 1) * 26;
       const label = makeEl('text', {
         class: 'petal-label',
         x: 0,
@@ -213,8 +260,9 @@ function drawFlowerSvg(flower) {
         transform: `rotate(${-angle} 0 ${-len * 0.52})`,
       });
       label.textContent = snippet(petal.text);
-      label.style.opacity = petal.isGhost ? '0.18' : String(0.35 + 0.45 * petal.aliveness);
+      label.style.opacity = petal.isGhost ? '0.18' : String(0.32 + 0.4 * petal.aliveness);
 
+      g.appendChild(under);
       g.appendChild(path);
       g.appendChild(label);
       // One handler per petal (on the group), so moving between the shape and
@@ -231,12 +279,12 @@ function drawFlowerSvg(flower) {
       const path = makeEl('path', {
         d: petalPath(slotSeed),
         class: 'petal empty',
-        fill: 'none',
-        stroke: 'rgba(58,51,44,0.14)',
+        fill: 'rgba(255,255,255,0.06)',
+        stroke: 'rgba(58,51,44,0.16)',
         'stroke-width': '1',
-        'stroke-dasharray': '3 6',
+        'stroke-dasharray': '3 7',
       });
-      path.style.opacity = '0.6';
+      path.style.opacity = '0.7';
       g.appendChild(path);
       // An empty slot is also an invitation to leave a note.
       if (flower.hasRoom) {
@@ -251,17 +299,34 @@ function drawFlowerSvg(flower) {
     sway.appendChild(g);
   }
 
-  // The heart of the flower, touch it to leave a note.
+  // The heart of the flower: a lit core ringed with little stamens.
   const heart = makeEl('g', { class: 'heart' + (flower.hasRoom ? ' has-room' : '') });
+  const coreR = 22 + seeded(flower.id, 9) * 4;
+  heart.appendChild(makeEl('circle', { cx, cy, r: coreR + 6, fill: 'rgba(201,168,106,0.25)' }));
   const core = makeEl('circle', {
     class: 'heart-core',
     cx,
     cy,
-    r: 26 + seeded(flower.id, 9) * 4,
+    r: coreR,
     fill: `url(#heart-${flower.id})`,
-    stroke: 'rgba(58,51,44,0.08)',
+    stroke: 'rgba(120,90,50,0.18)',
     'stroke-width': '1',
   });
+  heart.appendChild(core);
+  // A scatter of stamens for a lifelike center.
+  const stamens = 16;
+  for (let s = 0; s < stamens; s++) {
+    const a = (Math.PI * 2 * s) / stamens + seeded(flower.id, s + 20);
+    const rr = coreR * (0.35 + seeded(flower.id, s + 40) * 0.6);
+    heart.appendChild(
+      makeEl('circle', {
+        cx: cx + Math.cos(a) * rr,
+        cy: cy + Math.sin(a) * rr,
+        r: 1.4 + seeded(flower.id, s + 60) * 1.4,
+        fill: s % 3 === 0 ? 'rgba(150,108,52,0.6)' : 'rgba(252,245,224,0.85)',
+      }),
+    );
+  }
   heart.style.cursor = 'pointer';
   heart.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -272,7 +337,6 @@ function drawFlowerSvg(flower) {
     showTip(flower.hasRoom ? 'click to leave a note' : 'this flower is full', core),
   );
   heart.addEventListener('mouseleave', hideTip);
-  heart.appendChild(core);
   svg.appendChild(heart);
 
   return svg;
@@ -360,19 +424,31 @@ function settleWave() {
   for (const f of flowerNodes) f.node.style.transform = 'translate(0px, 0px)';
 }
 
-function spawnRipple(x, y) {
+function makeRipple(x, y, big) {
   if (reduceMotion) return;
-  if (Math.hypot(x - lastRippleX, y - lastRippleY) < 22) return;
-  lastRippleX = x;
-  lastRippleY = y;
   const layer = $('#ripples');
-  if (layer.childElementCount > 26) return;
+  if (!layer || layer.childElementCount > 32) return;
   const r = document.createElement('div');
-  r.className = 'ripple';
+  r.className = big ? 'ripple ripple-big' : 'ripple';
   r.style.left = `${x}px`;
   r.style.top = `${y}px`;
   r.addEventListener('animationend', () => r.remove());
   layer.appendChild(r);
+}
+
+function cursorRipple(x, y) {
+  if (Math.hypot(x - lastRippleX, y - lastRippleY) < 20) return;
+  lastRippleX = x;
+  lastRippleY = y;
+  makeRipple(x, y, false);
+}
+
+// The pond stirs on its own: larger, slower ripples surface at random.
+function ambientRipple() {
+  if (!reduceMotion && !$('#viewport').hidden) {
+    makeRipple(Math.random() * window.innerWidth, Math.random() * window.innerHeight, true);
+  }
+  setTimeout(ambientRipple, 1300 + Math.random() * 1700);
 }
 
 function setFlowers(list) {
@@ -509,7 +585,7 @@ function wireWorld() {
     // Hovering (no button down): stir the water and nudge the flowers.
     if (pointers.size === 0) {
       requestWave(e.clientX, e.clientY);
-      spawnRipple(e.clientX, e.clientY);
+      cursorRipple(e.clientX, e.clientY);
       return;
     }
     if (!pointers.has(e.pointerId)) return;
@@ -790,6 +866,7 @@ function wireOverlays() {
 
   $('#aboutBtn').addEventListener('click', openAbout);
   $('#leaveBtn').addEventListener('click', () => openComposer());
+  $('#logo').addEventListener('click', () => focusOn(flowerPosition(0).x, flowerPosition(0).y, 1.0));
   $('#compass').addEventListener('click', () => {
     const i = compassTarget >= 0 ? compassTarget : nearestFlowerIndex();
     if (i < 0) return;
@@ -890,6 +967,7 @@ async function start() {
   if (ok && body.flowers) setFlowers(body.flowers);
 
   $('#viewport').hidden = false;
+  $('#logo').hidden = false;
   $('#aboutBtn').hidden = false;
   $('#leaveBtn').hidden = false;
 
@@ -903,6 +981,7 @@ async function start() {
   focusOn(pos.x, pos.y, 1.0, 1600);
 
   showHint();
+  ambientRipple();
 }
 
 start();

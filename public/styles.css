@@ -100,7 +100,7 @@ body {
   overflow: hidden;
   touch-action: none; /* we handle pan and pinch ourselves */
   cursor: grab;
-  background: radial-gradient(140% 100% at 50% 0%, #e7eee9 0%, #d9e2dd 38%, #c8d5d0 78%, #bccac4 100%);
+  background: radial-gradient(150% 115% at 50% -8%, #e9efe4 0%, #d2e0d4 34%, #b9cec3 70%, #a6c0b5 100%);
   animation: fadeIn var(--slower) var(--ease) both;
 }
 
@@ -117,25 +117,25 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(38% 28% at 28% 35%, rgba(255, 255, 255, 0.22), transparent 60%),
-    radial-gradient(32% 24% at 72% 62%, rgba(255, 255, 255, 0.16), transparent 60%),
-    radial-gradient(28% 22% at 55% 82%, rgba(236, 223, 200, 0.18), transparent 60%);
-  animation: caustics 26s ease-in-out infinite alternate;
+    radial-gradient(42% 30% at 26% 32%, rgba(255, 255, 255, 0.3), transparent 60%),
+    radial-gradient(36% 26% at 74% 60%, rgba(255, 250, 234, 0.22), transparent 60%),
+    radial-gradient(32% 24% at 52% 84%, rgba(244, 227, 196, 0.24), transparent 62%);
+  animation: caustics 22s ease-in-out infinite alternate;
 }
 
 .viewport::after {
-  animation-duration: 34s;
+  animation-duration: 31s;
   animation-direction: alternate-reverse;
-  opacity: 0.7;
-  filter: blur(3px);
+  opacity: 0.8;
+  filter: blur(4px);
 }
 
 @keyframes caustics {
   0% {
-    transform: translate(-2.5%, -1.5%) scale(1);
+    transform: translate(-4.5%, -2.5%) scale(1);
   }
   100% {
-    transform: translate(2.5%, 3%) scale(1.06);
+    transform: translate(4.5%, 5%) scale(1.09);
   }
 }
 
@@ -150,21 +150,31 @@ body {
 
 .ripple {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  animation: rippleOut 1300ms ease-out forwards;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(64, 90, 98, 0.18), inset 0 0 7px rgba(255, 255, 255, 0.45);
+  animation: rippleOut 1400ms ease-out forwards;
+}
+
+/* The larger, slower ambient ripples that keep the pond alive on its own. */
+.ripple-big {
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-color: rgba(255, 255, 255, 0.62);
+  animation-duration: 2600ms;
 }
 
 @keyframes rippleOut {
   0% {
-    transform: scale(0.4);
-    opacity: 0.55;
+    transform: scale(0.3);
+    opacity: 0.85;
   }
   100% {
-    transform: scale(5);
+    transform: scale(6.5);
     opacity: 0;
   }
 }
@@ -201,10 +211,10 @@ body {
 
 @keyframes bob {
   from {
-    transform: translateY(-5px);
+    transform: translate(-3px, -8px);
   }
   to {
-    transform: translateY(6px);
+    transform: translate(3px, 9px);
   }
 }
 
@@ -325,6 +335,41 @@ body {
   font-family: var(--sans);
   font-size: 0.74rem;
   letter-spacing: 0.06em;
+}
+
+.logo {
+  position: fixed;
+  top: 1.3rem;
+  left: 1.6rem;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  opacity: 0.85;
+  transition: opacity var(--slow) var(--ease);
+  animation: softIn var(--slower) var(--ease);
+}
+
+.logo:hover {
+  opacity: 1;
+}
+
+.logo-mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  filter: drop-shadow(0 1px 2px rgba(58, 51, 44, 0.15));
+}
+
+.logo-word {
+  font-family: var(--serif);
+  font-size: 1.18rem;
+  letter-spacing: 0.01em;
+  color: var(--text);
 }
 
 .corner-link {

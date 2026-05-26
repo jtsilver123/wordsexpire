@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { isBlocked } from './profanity';
+import { isBlocked, hasLink } from './profanity';
 
 type Bindings = {
   DB: D1Database;
@@ -281,6 +281,7 @@ app.post('/api/flowers/:id/petals', async (c) => {
   if (text.length < MIN_TEXT) return c.json({ message: 'A few more words, perhaps.' }, 400);
   if (text.length > MAX_TEXT) return c.json({ message: 'That was a little too long to hold.' }, 400);
   if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
+  if (hasLink(text)) return c.json({ message: 'This is a place for words, not links.' }, 422);
 
   // When the words were first said. Defaults to today; one may reach back, never forward.
   let spokenAt = Number((body as { spokenAt?: number }).spokenAt);
@@ -440,6 +441,7 @@ app.post('/api/petals/:id/comments', async (c) => {
   if (!text) return c.json({ message: 'There were no words to leave.' }, 400);
   if (text.length > MAX_COMMENT) return c.json({ message: 'That reply was a little too long.' }, 400);
   if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
+  if (hasLink(text)) return c.json({ message: 'This is a place for words, not links.' }, 422);
 
   if (await rateExceeded(c.env.DB, ipHash, 'comment', COMMENTS_PER_HOUR, HOUR, at)) {
     return c.json({ message: 'You have replied to a few already. Come back in a while.' }, 429);

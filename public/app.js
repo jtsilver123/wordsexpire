@@ -1276,10 +1276,15 @@ function wireOverlays() {
       closeOverlay($('#reader'));
       closeOverlay($('#composer'));
       closeOverlay($('#about'));
+      closeOverlay($('#book'));
     }
   });
 
   $('#aboutBtn').addEventListener('click', openAbout);
+  $('#bookBtn').addEventListener('click', () => {
+    closeOverlay($('#about'));
+    openBook();
+  });
   $('#leaveBtn').addEventListener('click', () => openComposer());
   $('#logo').addEventListener('click', () => focusOn(flowerPosition(0).x, flowerPosition(0).y, 1.0));
   $('#wanderBtn').addEventListener('click', wanderToRandom);
@@ -1347,6 +1352,44 @@ function renderMine() {
     });
     el.appendChild(row);
   }
+}
+
+// The garden, in words: every living note as plain, readable text. Also the
+// keyboard/screen-reader path into the otherwise spatial pond.
+function openBook() {
+  const list = $('#bookList');
+  list.textContent = '';
+  const living = [];
+  state.flowers.forEach((f) => f.petals.forEach((p) => !p.expired && living.push(p)));
+  living.sort((a, b) => b.createdAt - a.createdAt);
+  if (!living.length) {
+    const e = document.createElement('p');
+    e.className = 'book-empty';
+    e.textContent = 'the garden is quiet just now.';
+    list.appendChild(e);
+  }
+  for (const p of living) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'book-note';
+    const t = document.createElement('p');
+    t.className = 'book-text';
+    t.textContent = p.text;
+    row.appendChild(t);
+    const ctx = contextLine(p);
+    if (ctx) {
+      const m = document.createElement('p');
+      m.className = 'book-meta';
+      m.textContent = ctx;
+      row.appendChild(m);
+    }
+    row.addEventListener('click', () => {
+      closeOverlay($('#book'));
+      goToPetal(p.id);
+    });
+    list.appendChild(row);
+  }
+  openOverlay($('#book'));
 }
 
 async function openAbout() {

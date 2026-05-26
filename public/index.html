@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=26" />
+    <link rel="stylesheet" href="/styles.css?v=27" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -107,6 +107,16 @@
         </p>
         <div class="stats" id="stats"></div>
         <div class="mine" id="mine" hidden></div>
+        <button type="button" class="text-link book-open" id="bookBtn">read every note</button>
+        <button type="button" class="text-link close" data-close>close</button>
+      </div>
+    </div>
+
+    <!-- The garden, in words: a plain, readable list of every living note. -->
+    <div id="book" class="overlay" hidden>
+      <div class="card book-card" role="dialog" aria-modal="true">
+        <p class="book-head">the garden, in words</p>
+        <div class="book-list" id="bookList"></div>
         <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
@@ -253,6 +263,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=26" type="module"></script>
+    <script src="/app.js?v=27" type="module"></script>
   </body>
 </html>

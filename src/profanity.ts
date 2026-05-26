@@ -25,3 +25,15 @@ export function isBlocked(text: string): boolean {
   const words = new Set(normalized.split(/\s+/).filter(Boolean));
   return BLOCKED.some((bad) => words.has(bad));
 }
+
+// Link spam is the likeliest abuse for an open note box. Block the obvious
+// signals (a scheme, www., or a label.tld) while avoiding TLDs that collide
+// with ordinary prose ('call.me', 'rest.in').
+const SCHEME_RE = /(https?:\/\/|www\.)/i;
+const DOMAIN_RE =
+  /\b[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(com|net|org|io|xyz|info|biz|app|dev|site|online|shop|link|click|store|club|live|vip|ru|cn|tk|ga|ml|cf|gq|cc|to)\b/i;
+
+export function hasLink(text: string): boolean {
+  return SCHEME_RE.test(text) || DOMAIN_RE.test(text);
+}
+

@@ -100,13 +100,23 @@ body {
   inset: 0;
   overflow: hidden;
   touch-action: none; /* we handle pan and pinch ourselves */
-  cursor: grab;
+  /* The gardener's watering can, carried across the whole pond. */
+  cursor: url('/cursor-can.svg') 5 11, default;
   background: radial-gradient(150% 115% at 50% -8%, #e9efe4 0%, #d2e0d4 34%, #b9cec3 70%, #a6c0b5 100%);
   animation: fadeIn var(--slower) var(--ease) both;
 }
 
-.viewport:active {
-  cursor: grabbing;
+/* Over anything you can tend, the can tips to pour. */
+.flower svg,
+.cta,
+.wander,
+.logo,
+.corner-link,
+.compass,
+.sound-toggle,
+.drop,
+.text-link {
+  cursor: url('/cursor-can-pour.svg') 5 11, pointer;
 }
 
 /* Slow drifting light on the water, so the surface is never quite still. */
@@ -390,10 +400,9 @@ body {
   width: 100%;
   height: 100%;
   overflow: visible;
-  /* The frog rides the bloom (a circle), not the square corners of the box,
-     so it stays a frog over the flower and a normal cursor over the pond. */
+  /* The pour cursor rides the bloom (a circle), not the square corners of the
+     box, so the can only tips when you are actually over a flower. */
   border-radius: 50%;
-  cursor: url('/frog.svg') 16 16, pointer;
 }
 
 .petal-label {
@@ -465,7 +474,6 @@ body {
   height: 100%;
   animation: bob 11s ease-in-out infinite alternate;
   will-change: transform;
-  cursor: help;
 }
 
 .lilypad svg {

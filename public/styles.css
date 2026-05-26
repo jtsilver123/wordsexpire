@@ -290,41 +290,62 @@ body {
   opacity: 0;
 }
 
-/* The volume slider eases open only while sound is on. */
+/* The volume slider eases open only while sound is on. A taller transparent
+   box gives a comfortable touch target around a slim visible track. */
 .sound-vol {
   width: 0;
   opacity: 0;
   pointer-events: none;
-  height: 3px;
+  height: 22px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--hairline);
-  border-radius: 3px;
+  background: transparent;
   transition: width var(--slow) var(--ease), opacity var(--slow) var(--ease);
 }
 
 .sound.on .sound-vol {
-  width: 92px;
+  width: 96px;
   opacity: 1;
   pointer-events: auto;
+}
+
+.sound-vol::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--hairline);
+}
+
+.sound-vol::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--hairline);
+}
+
+.sound-vol::-moz-range-progress {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(178, 111, 92, 0.55);
 }
 
 .sound-vol::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
+  margin-top: -5.5px; /* center the thumb on the 4px track */
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 1px 3px rgba(58, 51, 44, 0.3);
   cursor: pointer;
 }
 
 .sound-vol::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   border: none;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 1px 3px rgba(58, 51, 44, 0.3);
   cursor: pointer;
 }
 
@@ -402,10 +423,12 @@ body {
 
 .hint {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   top: 1.6rem;
   margin: 0;
+  max-width: min(78vw, 30rem);
+  padding: 0 1rem;
   font-family: var(--sans);
   font-size: 0.82rem;
   letter-spacing: 0.03em;
@@ -605,6 +628,31 @@ body {
   font-size: 1.05rem;
   line-height: 1;
   margin-top: -1px;
+}
+
+/* A quiet invitation to read someone else's note. */
+.wander {
+  position: fixed;
+  left: 50%;
+  bottom: 4.8rem;
+  transform: translateX(-50%);
+  z-index: 6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  padding: 0.3rem 0.5rem;
+  opacity: 0.8;
+  transition: color var(--slow) var(--ease), opacity var(--slow) var(--ease);
+  animation: softIn var(--slower) var(--ease);
+}
+
+.wander:hover {
+  color: var(--accent);
+  opacity: 1;
 }
 
 /* ---------- flower internals ---------- */
@@ -977,10 +1025,31 @@ body {
 
 /* ---------- composer ---------- */
 .compose-caption {
-  margin: 0 0 1.4rem;
+  margin: 0 0 0.5rem;
   font-style: italic;
   color: var(--muted);
   font-size: 1.2rem;
+}
+
+/* A faint, optional prompt to spark the writing. */
+.compose-prompt {
+  margin: 0 0 1.3rem;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.7;
+  min-height: 1em;
+}
+
+/* Quiet reassurance, to make it safe to write something true. */
+.compose-reassure {
+  margin: 1.2rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.7;
 }
 
 textarea {
@@ -1104,9 +1173,22 @@ textarea:focus {
 
 .compose-done {
   margin: 1.4rem 0 0;
+  animation: fadeIn var(--slow) var(--ease);
+}
+
+.compose-done p {
+  margin: 0 0 0.6rem;
   font-size: 1.3rem;
   font-style: italic;
-  animation: fadeIn var(--slow) var(--ease);
+}
+
+/* Reading-card footer: share and close, side by side. */
+.reader-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  margin-top: 1.6rem;
 }
 
 /* Honeypot stays out of sight and out of the tab order. */
@@ -1234,14 +1316,13 @@ textarea:focus {
     font-size: 0.82rem;
     padding: 0.6rem 1.15rem;
   }
-  .signature {
-    bottom: 3.7rem;
-    font-size: 0.66rem;
-    padding: 0 6.5rem; /* clear of the sound control on the left */
+  .wander {
+    bottom: 3.9rem;
   }
+  /* Drop the hint below the logo and the garden link so they never overlap. */
   .hint {
-    top: 1rem;
-    padding: 0 1rem;
+    top: 3.9rem;
+    font-size: 0.74rem;
   }
   .about-reflection {
     font-size: 1.18rem;

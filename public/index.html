@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=13" />
+    <link rel="stylesheet" href="/styles.css?v=14" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -89,13 +89,13 @@
     <div id="yt" class="yt-hidden" aria-hidden="true"></div>
 
     <p class="hint" id="hint" hidden></p>
-    <p class="signature">a small note will fade unless others keep it alive</p>
 
-    <!-- Always-present invitation to leave a note. -->
+    <!-- Always-present invitation to leave a note, and to read another. -->
     <button type="button" class="cta" id="leaveBtn" hidden>
       <span class="cta-mark" aria-hidden="true">+</span>
       <span>leave a note</span>
     </button>
+    <button type="button" class="wander" id="wanderBtn" hidden>wander to another</button>
 
     <!-- The reflection, and the garden's living numbers. -->
     <div id="about" class="overlay" hidden>
@@ -134,7 +134,10 @@
           </button>
           <span class="keep-label" id="keepLabel">keep alive</span>
         </div>
-        <button type="button" class="text-link close" data-close>close</button>
+        <div class="reader-foot">
+          <button type="button" class="text-link" id="shareBtn">share</button>
+          <button type="button" class="text-link" data-close>close</button>
+        </div>
       </div>
     </div>
 
@@ -142,6 +145,7 @@
     <div id="composer" class="overlay" hidden>
       <div class="card composer-card" role="dialog" aria-modal="true">
         <p class="compose-caption">Leave something small.</p>
+        <p class="compose-prompt" id="composePrompt"></p>
         <form id="composeForm" autocomplete="off">
           <!-- Honeypot: hidden from people, tempting to bots. -->
           <div class="gate" aria-hidden="true">
@@ -207,16 +211,21 @@
             </div>
           </details>
 
+          <p class="compose-reassure">no name, no account. just you and the pond.</p>
+
           <div class="compose-foot">
             <span class="counter" id="counter" hidden></span>
             <button type="submit" class="text-link place" id="placeBtn">place it</button>
           </div>
         </form>
-        <p class="compose-done" id="composeDone" hidden>Thank you for that.</p>
+        <div class="compose-done" id="composeDone" hidden>
+          <p>Thank you for that.</p>
+          <button type="button" class="text-link" id="shareNew">keep a link to it</button>
+        </div>
         <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
 
-    <script src="/app.js?v=13" type="module"></script>
+    <script src="/app.js?v=14" type="module"></script>
   </body>
 </html>

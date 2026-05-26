@@ -22,6 +22,17 @@ const MEDIUM_PHRASE = {
   email: 'by email', letter: 'in a letter', other: '',
 };
 
+// Faint, optional prompts to help past the blank page.
+const PROMPTS = [
+  'what did you never get to say?',
+  'what are you carrying?',
+  'what would you forgive?',
+  'what are you grateful for?',
+  'what do you hope for?',
+  'what are you letting go of?',
+  'who do you miss?',
+];
+
 const LIFESPAN_SECONDS = 604800; // 7 days; mirrors the Worker's decay window
 const MIN_CHARS = 2; // a note needs at least a little
 const MAX_CHARS = 280;
@@ -565,14 +576,37 @@ function wireWorld() {
   const vp = $('#viewport');
   const pointers = new Map();
   let last = { x: 0, y: 0 };
+  let lastT = 0;
   let pinchDist = 0;
+  let velX = 0;
+  let velY = 0;
+
+  // After a flick, the pond keeps gliding and slows to rest.
+  function glide() {
+    const token = tweenToken;
+    function step() {
+      if (token !== tweenToken) return; // a new touch took over
+      velX *= 0.93;
+      velY *= 0.93;
+      view.x += velX;
+      view.y += velY;
+      applyView();
+      if (Math.hypot(velX, velY) > 0.35) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
 
   vp.addEventListener('pointerdown', (e) => {
-    tweenToken++; // stop any easing the moment a hand touches the world
+    tweenToken++; // stop any easing (or glide) the moment a hand touches the world
     settleWave(); // flowers shouldn't stay leaned while dragging the pond
+    velX = 0;
+    velY = 0;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     moved = false;
-    if (pointers.size === 1) last = { x: e.clientX, y: e.clientY };
+    if (pointers.size === 1) {
+      last = { x: e.clientX, y: e.clientY };
+      lastT = performance.now();
+    }
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -596,6 +630,8 @@ function wireWorld() {
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
       if (pinchDist > 0) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, dist / pinchDist);
       pinchDist = dist;
+      velX = 0;
+      velY = 0; // no fling out of a pinch
       moved = true;
       return;
     }
@@ -603,19 +639,28 @@ function wireWorld() {
     const dx = e.clientX - last.x;
     const dy = e.clientY - last.y;
     if (Math.hypot(dx, dy) > 3) moved = true;
+    const t = performance.now();
+    const dt = Math.max(8, t - lastT);
+    velX = (dx / dt) * 16; // carry the speed for the glide
+    velY = (dy / dt) * 16;
     view.x += dx;
     view.y += dy;
     last = { x: e.clientX, y: e.clientY };
+    lastT = t;
     applyView();
   });
 
   const release = (e) => {
+    const wasSingle = pointers.size === 1;
     pointers.delete(e.pointerId);
     if (pointers.size === 1) {
       const p = [...pointers.values()][0];
       last = { x: p.x, y: p.y };
+      lastT = performance.now();
     }
     pinchDist = 0;
+    // Let go of a drag with speed behind it, and the pond glides on.
+    if (pointers.size === 0 && wasSingle && moved && Math.hypot(velX, velY) > 1) glide();
   };
   vp.addEventListener('pointerup', release);
   vp.addEventListener('pointercancel', release);
@@ -666,6 +711,7 @@ function openOverlay(el) {
 function closeOverlay(el) {
   if (!el || el.hidden) return;
   el.classList.remove('open');
+  if (el.id === 'reader' && location.pathname !== '/') history.replaceState(null, '', '/');
   if (reduceMotion) {
     el.hidden = true;
   } else {
@@ -681,6 +727,7 @@ function openReader(petal, pathEl) {
   hideTip();
   state.openPetalId = petal.id;
   state.openPetalEl = pathEl;
+  history.replaceState(null, '', `/p/${petal.id}`); // a shareable address for this note
   $('#petalText').textContent = petal.text;
 
   const context = contextLine(petal);
@@ -776,6 +823,7 @@ async function openComposer(flower) {
   state.composeFlowerId = target.id;
   focusFlower(target.id, 1.15);
 
+  $('#composePrompt').textContent = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
   $('#composeText').value = '';
   $('#composeWhen').max = todayInputValue();
   $('#composeWhen').value = todayInputValue();
@@ -826,6 +874,8 @@ async function placePetal(e) {
 
   $('#composeForm').hidden = true;
   $('#composeDone').hidden = false;
+  // Offer the author a link back to their own note.
+  if (body.petal) $('#shareNew').onclick = () => shareNote(body.petal.id, $('#shareNew'));
 
   if (body.petal) flower.petals.push(body.petal);
   flower.hasRoom = flower.petals.length < flower.maxPetals;
@@ -842,7 +892,46 @@ async function placePetal(e) {
     focusFlower(flower.id, 1.05);
     const fresh = $('#world').querySelector(`[data-petal-id="${body.petal && body.petal.id}"]`);
     if (fresh) fresh.classList.add('blooming');
-  }, 2000);
+  }, 4200);
+}
+
+// Share (or copy) a link straight to one note.
+async function shareNote(id, btn) {
+  const url = `${location.origin}/p/${id}`;
+  const flash = (msg) => {
+    if (!btn) return;
+    const prev = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => (btn.textContent = prev), 2200);
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'A note on WordsExpire', url });
+      return;
+    } catch {
+      /* cancelled; fall through to copy */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    flash('link copied');
+  } catch {
+    flash(url);
+  }
+}
+
+// Drift to a random living note and open it.
+function wanderToRandom() {
+  const all = [];
+  state.flowers.forEach((f, i) => f.petals.forEach((p) => all.push({ fi: i, petal: p })));
+  if (!all.length) return;
+  const pick = all[Math.floor(Math.random() * all.length)];
+  const pos = flowerPosition(pick.fi);
+  focusOn(pos.x, pos.y, 1.05);
+  setTimeout(() => {
+    const el = $('#world').querySelector(`[data-petal-id="${pick.petal.id}"]`);
+    openReader(pick.petal, el);
+  }, 900);
 }
 
 // ---------- overlays + chrome ----------
@@ -867,6 +956,10 @@ function wireOverlays() {
   $('#aboutBtn').addEventListener('click', openAbout);
   $('#leaveBtn').addEventListener('click', () => openComposer());
   $('#logo').addEventListener('click', () => focusOn(flowerPosition(0).x, flowerPosition(0).y, 1.0));
+  $('#wanderBtn').addEventListener('click', wanderToRandom);
+  $('#shareBtn').addEventListener('click', () => {
+    if (state.openPetalId) shareNote(state.openPetalId, $('#shareBtn'));
+  });
   $('#compass').addEventListener('click', () => {
     const i = compassTarget >= 0 ? compassTarget : nearestFlowerIndex();
     if (i < 0) return;
@@ -950,7 +1043,10 @@ function runOnboarding() {
 
 function showHint() {
   const hint = $('#hint');
-  hint.textContent = 'drag or scroll to wander · pinch to zoom · touch a flower to leave a note';
+  const touch = window.matchMedia('(hover: none)').matches;
+  hint.textContent = touch
+    ? 'drag to wander · pinch to zoom · tap a flower'
+    : 'drag or scroll to wander · pinch to zoom · touch a flower to leave a note';
   hint.hidden = false;
   hint.classList.add('show');
   setTimeout(() => hint.classList.remove('show'), 6000);
@@ -1046,20 +1142,65 @@ async function start() {
   $('#logo').hidden = false;
   $('#aboutBtn').hidden = false;
   $('#leaveBtn').hidden = false;
+  $('#wanderBtn').hidden = false;
   $('#sound').hidden = false;
   setupSound();
 
-  // Arrive gently: start pulled back, then ease in toward the first flower.
-  const first = state.flowers[0];
-  const pos = first ? flowerPosition(0) : { x: 0, y: 0 };
-  view.scale = 0.55;
-  view.x = window.innerWidth / 2 - pos.x * view.scale;
-  view.y = window.innerHeight / 2 - pos.y * view.scale;
-  applyView();
-  focusOn(pos.x, pos.y, 1.0, 1600);
+  // A shared link drifts straight to its note; otherwise we arrive at the first.
+  if (!openFromPath()) {
+    const first = state.flowers[0];
+    const pos = first ? flowerPosition(0) : { x: 0, y: 0 };
+    view.scale = 0.55;
+    view.x = window.innerWidth / 2 - pos.x * view.scale;
+    view.y = window.innerHeight / 2 - pos.y * view.scale;
+    applyView();
+    focusOn(pos.x, pos.y, 1.0, 1600);
+  }
 
   showHint();
   ambientRipple();
+}
+
+// If the URL points at one note (/p/:id) or flower (/f/:id), go there.
+function openFromPath() {
+  const m = location.pathname.match(/^\/(p|f)\/([\w-]+)/);
+  if (!m) return false;
+  const [, kind, id] = m;
+
+  if (kind === 'f') {
+    const i = state.flowers.findIndex((f) => f.id === id);
+    if (i < 0) return false;
+    const pos = flowerPosition(i);
+    view.scale = 1;
+    view.x = window.innerWidth / 2 - pos.x;
+    view.y = window.innerHeight / 2 - pos.y;
+    applyView();
+    return true;
+  }
+
+  let fi = -1;
+  let petal = null;
+  state.flowers.forEach((f, i) => {
+    const found = f.petals.find((p) => p.id === id);
+    if (found) {
+      fi = i;
+      petal = found;
+    }
+  });
+  if (fi < 0) {
+    history.replaceState(null, '', '/'); // the note has drifted away
+    return false;
+  }
+  const pos = flowerPosition(fi);
+  view.scale = 1.05;
+  view.x = window.innerWidth / 2 - pos.x * view.scale;
+  view.y = window.innerHeight / 2 - pos.y * view.scale;
+  applyView();
+  setTimeout(() => {
+    const el = $('#world').querySelector(`[data-petal-id="${id}"]`);
+    openReader(petal, el);
+  }, 650);
+  return true;
 }
 
 start();

@@ -394,6 +394,32 @@ app.delete('/admin/flowers/:id', async (c) => {
   return c.json({ ok: true });
 });
 
+// A shared link to one note serves the same app, but with the note's words
+// woven into the social preview, so a text or post shows the words rather
+// than a bare link. The app itself reads the path and drifts to the petal.
+app.get('/p/:id', async (c) => {
+  const asset = await c.env.ASSETS.fetch(new Request(new URL('/', c.req.url).toString(), c.req.raw));
+  const row = await c.env.DB.prepare('SELECT text FROM petals WHERE id = ? AND deleted_at IS NULL')
+    .bind(c.req.param('id'))
+    .first<{ text: string }>();
+  if (!row) return asset;
+
+  const desc = row.text.length > 180 ? `${row.text.slice(0, 177)}…` : row.text;
+  const url = new URL(c.req.url).toString();
+  const set = (content: string) => ({
+    element(el: Element) {
+      el.setAttribute('content', content);
+    },
+  });
+  return new HTMLRewriter()
+    .on('meta[property="og:title"]', set('A note kept on WordsExpire'))
+    .on('meta[name="twitter:title"]', set('A note kept on WordsExpire'))
+    .on('meta[property="og:description"]', set(desc))
+    .on('meta[name="twitter:description"]', set(desc))
+    .on('meta[property="og:url"]', set(url))
+    .transform(asset);
+});
+
 // --- static fallback ---------------------------------------------------------
 // Static files are served by the assets runtime before the Worker is reached;
 // this only catches client navigations, handing back the single page.

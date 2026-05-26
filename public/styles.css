@@ -1212,6 +1212,18 @@ textarea:focus {
   display: none;
 }
 
+/* A small caret signals the section opens, and rotates when it does. */
+.details > summary::after {
+  content: '›';
+  display: inline-block;
+  margin-left: 0.45rem;
+  transition: transform var(--slow) var(--ease);
+}
+
+.details[open] > summary::after {
+  transform: rotate(90deg);
+}
+
 .details > summary:hover {
   color: var(--accent);
 }

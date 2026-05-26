@@ -931,6 +931,7 @@ function openReader(petal, pathEl) {
   }
 
   $('#petalLife').textContent = petalLife(petal);
+  $('#petalLife').hidden = petal.expired; // the faded note already says it
 
   $('.keep').classList.remove('kept');
   $('#keepLabel').textContent = 'keep alive';
@@ -964,6 +965,7 @@ async function keepAlive(e) {
   $('.keep').classList.add('kept');
   $('#keepLabel').textContent = body.alreadyKept ? 'already kept alive' : 'renewed';
   $('#petalLife').textContent = petalLife(body.petal);
+  $('#petalLife').hidden = false;
   if (!body.alreadyKept) playRenewFx();
 
   const petal = body.petal;

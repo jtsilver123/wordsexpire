@@ -10,9 +10,8 @@ type Bindings = {
 };
 
 // --- decay constants ---------------------------------------------------------
-const LIFESPAN = 604800; // 7 days, in seconds
-const GRACE = 172800; // 2 days a dead petal lingers as a ghost
-const TOTAL = LIFESPAN + GRACE; // beyond this, a petal is soft-deleted
+const LIFESPAN = 604800; // 7 days, in seconds; aliveness eases to 0 across this
+// Expired petals are not removed; they linger, wilted and unreadable, until renewed.
 
 // --- abuse limits ------------------------------------------------------------
 const MIN_TEXT = 2;
@@ -113,21 +112,14 @@ function shapePetal(p: PetalRow, at: number) {
     imageUrl: p.image_id ? `/i/${p.image_id}` : null,
     reactionCount: p.reaction_count,
     aliveness: a,
-    // Once aliveness hits zero a petal lingers faintly through the grace window.
-    isGhost: a <= 0,
+    // Once aliveness hits zero the petal has expired: it stays on the flower,
+    // wilted, its words no longer legible, until a reaction brings it back.
+    expired: a <= 0,
   };
 }
 
 const PETAL_COLUMNS =
   'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, last_renewed_at, reaction_count';
-
-// Lazily clear petals that have outlived even their grace period.
-async function sweep(db: D1Database, at: number): Promise<void> {
-  await db
-    .prepare('UPDATE petals SET deleted_at = ? WHERE deleted_at IS NULL AND last_renewed_at < ?')
-    .bind(at, at - TOTAL)
-    .run();
-}
 
 async function rateExceeded(
   db: D1Database,
@@ -155,13 +147,10 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
     .first<{ id: string; max_petals: number; created_at: number; theme: string | null }>();
   if (!flower) return null;
 
+  // Expired petals are kept (they linger, wilted), so there is no time filter.
   const { results } = await db
-    .prepare(
-      `SELECT ${PETAL_COLUMNS} FROM petals ` +
-        'WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ? ' +
-        'ORDER BY created_at ASC',
-    )
-    .bind(flowerId, at - TOTAL)
+    .prepare(`SELECT ${PETAL_COLUMNS} FROM petals WHERE flower_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`)
+    .bind(flowerId)
     .all<PetalRow>();
 
   const petals = (results ?? []).map((p) => shapePetal(p, at));
@@ -181,9 +170,10 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 async function ensureOpenFlower(db: D1Database, at: number): Promise<void> {
   const { results } = await db.prepare('SELECT id, max_petals FROM flowers').all<{ id: string; max_petals: number }>();
   for (const f of results ?? []) {
+    // Expired petals keep their slot, so they count toward a flower being full.
     const row = await db
-      .prepare('SELECT COUNT(*) AS n FROM petals WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ?')
-      .bind(f.id, at - TOTAL)
+      .prepare('SELECT COUNT(*) AS n FROM petals WHERE flower_id = ? AND deleted_at IS NULL')
+      .bind(f.id)
       .first<{ n: number }>();
     if ((row?.n ?? 0) < f.max_petals) return; // a flower still has room
   }
@@ -196,7 +186,6 @@ async function ensureOpenFlower(db: D1Database, at: number): Promise<void> {
 
 app.get('/api/flowers', async (c) => {
   const at = now();
-  await sweep(c.env.DB, at);
   await ensureOpenFlower(c.env.DB, at);
   const { results } = await c.env.DB.prepare('SELECT id FROM flowers ORDER BY created_at ASC').all<{ id: string }>();
   const flowers = [];
@@ -213,14 +202,16 @@ app.get('/api/stats', async (c) => {
   const db = c.env.DB;
   const alive = await db
     .prepare('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?')
-    .bind(at - TOTAL)
+    .bind(at - LIFESPAN)
     .first<{ n: number }>();
   const flowers = await db.prepare('SELECT COUNT(*) AS n FROM flowers').first<{ n: number }>();
   const kept = await db.prepare('SELECT COALESCE(SUM(reaction_count), 0) AS n FROM petals').first<{ n: number }>();
-  const faded = await db.prepare('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NOT NULL').first<{ n: number }>();
+  const faded = await db
+    .prepare('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at < ?')
+    .bind(at - LIFESPAN)
+    .first<{ n: number }>();
   const oldest = await db
-    .prepare('SELECT MIN(spoken_at) AS t FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?')
-    .bind(at - TOTAL)
+    .prepare('SELECT MIN(spoken_at) AS t FROM petals WHERE deleted_at IS NULL')
     .first<{ t: number | null }>();
 
   return c.json({
@@ -236,7 +227,6 @@ app.get('/api/stats', async (c) => {
 
 app.get('/api/flowers/:id', async (c) => {
   const at = now();
-  await sweep(c.env.DB, at);
   const flower = await loadFlower(c.env.DB, c.req.param('id'), at);
   if (!flower) return c.json({ message: 'That flower is no longer here.' }, 404);
   return c.json({ flower });
@@ -395,6 +385,11 @@ app.post('/api/petals/:id/react', async (c) => {
     .bind(petalId)
     .first<PetalRow>();
   if (!petal) return c.json({ message: 'That petal has already gone.' }, 404);
+
+  // Once a petal has expired, it cannot be brought back.
+  if (aliveness(petal.last_renewed_at, at) <= 0) {
+    return c.json({ message: 'These words have faded for good.' }, 410);
+  }
 
   // One renewal per petal per person per day.
   const recent = await c.env.DB.prepare(

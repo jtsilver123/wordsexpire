@@ -141,15 +141,17 @@ function snippet(text) {
 
 // How long a petal has left, and how often it's been renewed.
 function petalLife(p) {
-  const left = Math.max(0, p.aliveness) * LIFESPAN_SECONDS;
+  const n = p.reactionCount || 0;
+  const kept = n > 0 ? `kept alive ${n} ${n === 1 ? 'time' : 'times'}` : null;
+  if (p.aliveness <= 0) {
+    return kept ? `${kept} · now faded` : 'these words have faded';
+  }
+  const left = p.aliveness * LIFESPAN_SECONDS;
   let when;
-  if (p.aliveness <= 0) when = 'nearly gone, touch to bring it back';
-  else if (left >= 2 * 86400) when = `fades in about ${Math.round(left / 86400)} days`;
+  if (left >= 2 * 86400) when = `fades in about ${Math.round(left / 86400)} days`;
   else if (left >= 86400) when = 'fades in about a day';
   else if (left >= 2 * 3600) when = `fades in about ${Math.round(left / 3600)} hours`;
   else when = 'fades within the hour';
-  const n = p.reactionCount || 0;
-  const kept = n > 0 ? `kept alive ${n} ${n === 1 ? 'time' : 'times'}` : null;
   return kept ? `${kept} · ${when}` : when;
 }
 
@@ -253,34 +255,40 @@ function drawFlowerSvg(flower) {
       defs.appendChild(pg);
 
       // A fuller petal sitting just behind, for depth.
+      const a = petal.aliveness;
+      const expired = petal.expired;
+      // Wilting petals shrink toward their base; expired ones droop the most.
+      const droop = Math.max(0.78, Math.min(1, 0.78 + a * 0.55));
+
       const under = makeEl('path', {
         d: petalPath(`${petal.id}-u`),
         fill: rgbStr(deep),
         transform: 'scale(1.13)',
       });
-      under.style.opacity = petal.isGhost ? '0.1' : String(0.32 * petal.aliveness + 0.12);
+      under.style.opacity = expired ? '0.16' : String(0.32 * a + 0.12);
 
       const path = makeEl('path', {
         d: petalPath(petal.id),
-        class: 'petal',
+        class: 'petal' + (expired ? ' expired' : ''),
         fill: `url(#pg-${flower.id}-${i})`,
         stroke: rgbStr(deep),
         'stroke-width': '0.75',
         'stroke-opacity': '0.35',
       });
-      path.style.opacity = petal.isGhost ? '0.16' : String(0.5 + 0.5 * petal.aliveness);
+      path.style.opacity = expired ? '0.5' : String(0.5 + 0.5 * a);
+      path.style.transform = `scaleY(${droop})`;
       path.dataset.petalId = petal.id;
 
-      // A truncated preview, kept upright; the whole note waits on hover or touch.
+      // A truncated preview, kept upright. Expired petals blur, unreadable.
       const label = makeEl('text', {
-        class: 'petal-label',
+        class: 'petal-label' + (expired ? ' faded' : ''),
         x: 0,
         y: -len * 0.52,
         'text-anchor': 'middle',
         transform: `rotate(${-angle} 0 ${-len * 0.52})`,
       });
       label.textContent = snippet(petal.text);
-      label.style.opacity = petal.isGhost ? '0.18' : String(0.32 + 0.4 * petal.aliveness);
+      label.style.opacity = expired ? '0.55' : String(0.32 + 0.4 * a);
 
       g.appendChild(under);
       g.appendChild(path);
@@ -293,7 +301,7 @@ function drawFlowerSvg(flower) {
         if (moved) return;
         openReader(petal, path);
       });
-      g.addEventListener('mouseenter', () => showTip(petal.text, path));
+      g.addEventListener('mouseenter', () => showPetalTip(petal, path));
       g.addEventListener('mouseleave', hideTip);
     } else {
       const path = makeEl('path', {
@@ -766,14 +774,34 @@ function wireWorld() {
 
 // ---------- the hover tooltip ----------
 
-function showTip(text, el, hand) {
+function positionTip(el) {
   const tip = $('#petalTip');
-  tip.textContent = text;
-  tip.classList.toggle('hand', !!hand);
   const r = el.getBoundingClientRect();
   tip.style.left = `${r.left + r.width / 2}px`;
   tip.style.top = `${r.top + r.height / 2}px`;
   tip.hidden = false;
+}
+
+function showTip(text, el, hand) {
+  const tip = $('#petalTip');
+  tip.classList.toggle('hand', !!hand);
+  tip.textContent = text;
+  positionTip(el);
+}
+
+// A petal's preview: the words (blurred if expired) and how long it has left.
+function showPetalTip(petal, el) {
+  const tip = $('#petalTip');
+  tip.classList.remove('hand');
+  tip.textContent = '';
+  const words = document.createElement('div');
+  words.textContent = petal.text;
+  if (petal.expired) words.className = 'tip-faded';
+  const life = document.createElement('div');
+  life.className = 'tip-life';
+  life.textContent = petalLife(petal);
+  tip.append(words, life);
+  positionTip(el);
 }
 function hideTip() {
   $('#petalTip').hidden = true;
@@ -817,6 +845,10 @@ function openReader(petal, pathEl) {
   }
 
   $('#petalText').textContent = petal.text;
+  $('#petalText').classList.toggle('faded', petal.expired);
+  $('#petalFadedNote').hidden = !petal.expired;
+  // An expired petal cannot be kept alive; hide the offer entirely.
+  $('.keep').hidden = petal.expired;
 
   const context = contextLine(petal);
   const ctxEl = $('#petalContext');
@@ -861,10 +893,25 @@ async function keepAlive(e) {
     const found = flower.petals.find((p) => p.id === petal.id);
     if (found) Object.assign(found, petal);
   }
-  if (state.openPetalEl) {
-    state.openPetalEl.classList.add('renewing');
-    state.openPetalEl.setAttribute('fill', fadeColor(COLORS[petal.color] || COLORS.rose, petal.aliveness));
-    state.openPetalEl.style.opacity = String(0.4 + 0.6 * petal.aliveness);
+
+  // The note is legible again now that it's been brought back.
+  $('#petalText').classList.toggle('faded', petal.expired);
+  $('#petalFadedNote').hidden = !petal.expired;
+
+  // Un-wilt the petal and its label in place (no full-garden rebuild).
+  const pathEl = state.openPetalEl;
+  if (pathEl) {
+    pathEl.classList.remove('expired', 'renewing');
+    void pathEl.offsetWidth;
+    pathEl.classList.add('renewing');
+    pathEl.setAttribute('fill', fadeColor(COLORS[petal.color] || COLORS.rose, petal.aliveness));
+    pathEl.style.opacity = String(0.5 + 0.5 * petal.aliveness);
+    pathEl.style.transform = 'scaleY(1)';
+    const label = pathEl.parentNode && pathEl.parentNode.querySelector('.petal-label');
+    if (label) {
+      label.classList.remove('faded');
+      label.style.opacity = String(0.32 + 0.4 * petal.aliveness);
+    }
   }
 
   // The petal updated in place above, so just close, no full-garden rebuild.
@@ -1164,7 +1211,7 @@ async function openAbout() {
     );
   }
   lines.push(
-    `<p class="stat"><span class="n">${s.faded.toLocaleString()}</span> ${s.faded === 1 ? 'note has' : 'notes have'} expired<small>their words faded for good, unrenewed</small></p>`,
+    `<p class="stat"><span class="n">${s.faded.toLocaleString()}</span> ${s.faded === 1 ? 'note has' : 'notes have'} faded<small>their words gone now, blurred for good</small></p>`,
   );
   if (s.oldestSpokenAt) {
     const year = new Date(s.oldestSpokenAt * 1000).getFullYear();

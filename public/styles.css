@@ -403,7 +403,24 @@ body {
   fill: var(--text);
   pointer-events: auto;
   user-select: none;
-  transition: opacity var(--slow) var(--ease);
+  transition: opacity var(--slow) var(--ease), filter var(--slow) var(--ease);
+}
+
+/* Expired petals: the words are no longer legible. */
+.petal-label.faded {
+  filter: blur(2.4px);
+}
+
+.tip-faded {
+  filter: blur(4px);
+}
+
+.tip-life {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-top: 0.45rem;
 }
 
 /* A petal's full words, revealed on hover. */
@@ -859,6 +876,20 @@ body {
   margin: 0 0 1rem;
   font-size: 1.5rem;
   line-height: 1.6;
+  transition: filter var(--slow) var(--ease);
+}
+
+.petal-text.faded {
+  filter: blur(5px);
+  user-select: none;
+}
+
+.petal-faded-note {
+  margin: 0 0 1.4rem;
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .petal-context {

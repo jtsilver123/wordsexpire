@@ -1188,13 +1188,62 @@ textarea:focus {
     font-size: 18px;
   }
   .card {
-    padding: 2.6rem 1.6rem 1.8rem;
+    padding: 2.6rem 1.5rem 1.7rem;
+  }
+  #composer .card {
+    max-height: 86vh;
+    overflow-y: auto;
   }
   .petal-text {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
   .fields {
     grid-template-columns: 1fr;
     gap: 0.8rem;
+  }
+
+  /* Keep the corner chrome compact so nothing collides on a small screen. */
+  .logo {
+    top: 0.9rem;
+    left: 0.9rem;
+  }
+  .logo-word {
+    font-size: 1.02rem;
+  }
+  .logo-mark {
+    width: 22px;
+    height: 22px;
+  }
+  .corner-link {
+    top: 0.95rem;
+    right: 0.9rem;
+  }
+  .sound {
+    left: 0.9rem;
+    bottom: 1rem;
+  }
+  .sound-toggle {
+    width: 40px;
+    height: 40px;
+  }
+  .sound.on .sound-vol {
+    width: 56px;
+  }
+  .cta {
+    bottom: 1rem;
+    font-size: 0.82rem;
+    padding: 0.6rem 1.15rem;
+  }
+  .signature {
+    bottom: 3.7rem;
+    font-size: 0.66rem;
+    padding: 0 6.5rem; /* clear of the sound control on the left */
+  }
+  .hint {
+    top: 1rem;
+    padding: 0 1rem;
+  }
+  .about-reflection {
+    font-size: 1.18rem;
   }
 }

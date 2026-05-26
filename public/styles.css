@@ -198,6 +198,8 @@ body {
   animation: softIn var(--slower) var(--ease) both;
   transition: transform 760ms var(--ease);
   will-change: transform;
+  /* The frog rides the whole flower, so it never flickers between petals. */
+  cursor: url('/frog.svg') 16 16, pointer;
 }
 
 .flower-bob {
@@ -218,9 +220,123 @@ body {
   }
 }
 
-/* A frog keeps you company over the flowers. */
-.bloom-hit {
-  cursor: url('/frog.svg') 16 16, pointer;
+/* ---------- ambient sound ---------- */
+.sound {
+  position: fixed;
+  left: 1.6rem;
+  bottom: 1.5rem;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  animation: softIn var(--slower) var(--ease);
+}
+
+.sound-toggle {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 26px -18px rgba(58, 51, 44, 0.4);
+  transition: color var(--slow) var(--ease), box-shadow var(--slow) var(--ease);
+}
+
+.sound-toggle:hover {
+  color: var(--accent);
+}
+
+.sound-toggle.on {
+  color: var(--accent);
+  box-shadow: 0 0 18px -4px rgba(178, 111, 92, 0.4);
+}
+
+.sound-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.sound-icon .sp-body {
+  fill: currentColor;
+}
+
+.sound-icon .sp-wave {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity var(--slow) var(--ease);
+}
+
+.sound-icon .sp-slash {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.7;
+  transition: opacity var(--slow) var(--ease);
+}
+
+.sound-toggle.on .sp-wave {
+  opacity: 1;
+}
+
+.sound-toggle.on .sp-slash {
+  opacity: 0;
+}
+
+/* The volume slider eases open only while sound is on. */
+.sound-vol {
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--hairline);
+  border-radius: 3px;
+  transition: width var(--slow) var(--ease), opacity var(--slow) var(--ease);
+}
+
+.sound.on .sound-vol {
+  width: 92px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sound-vol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.sound-vol::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+/* The hidden YouTube player that carries the sound. */
+.yt-hidden {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 320px;
+  height: 180px;
+  pointer-events: none;
+  opacity: 0;
 }
 
 /* The soft mark a floating flower leaves on the water beneath it. */

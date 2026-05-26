@@ -956,6 +956,82 @@ function showHint() {
   setTimeout(() => hint.classList.remove('show'), 6000);
 }
 
+// ---------- ambient sound (a hidden, looping YouTube player) ----------
+
+const SOUND_VIDEO = 'YZrdpuC8D6Y';
+let ytPlayer = null;
+let ytReady = false;
+let soundOn = false;
+
+function savedVolume() {
+  const v = Number(localStorage.getItem('we_volume'));
+  return Number.isFinite(v) && v >= 0 && v <= 100 ? v : 45;
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  ytPlayer = new YT.Player('yt', {
+    videoId: SOUND_VIDEO,
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      loop: 1,
+      playlist: SOUND_VIDEO, // required for a single video to loop
+      disablekb: 1,
+      modestbranding: 1,
+      playsinline: 1,
+      rel: 0,
+    },
+    events: {
+      onReady: () => {
+        ytReady = true;
+        ytPlayer.setVolume(savedVolume());
+        if (soundOn) ytPlayer.playVideo();
+      },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.ENDED && soundOn) ytPlayer.playVideo();
+      },
+      onError: () => {
+        soundOn = false;
+        $('#sound').classList.remove('on');
+        const btn = $('#soundToggle');
+        btn.classList.remove('on');
+        btn.disabled = true;
+        btn.setAttribute('aria-label', 'sound unavailable');
+      },
+    },
+  });
+};
+
+function setSound(on) {
+  soundOn = on;
+  $('#sound').classList.toggle('on', on);
+  const btn = $('#soundToggle');
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if (!ytReady) return; // onReady will start it if soundOn
+  if (on) ytPlayer.playVideo();
+  else ytPlayer.pauseVideo();
+}
+
+function setupSound() {
+  const vol = $('#soundVol');
+  vol.value = String(savedVolume());
+  $('#soundToggle').addEventListener('click', () => setSound(!soundOn));
+  vol.addEventListener('input', () => {
+    const v = Number(vol.value);
+    localStorage.setItem('we_volume', String(v));
+    if (ytReady) ytPlayer.setVolume(v);
+  });
+  // Load the YouTube IFrame API once.
+  if (window.YT && window.YT.Player) {
+    window.onYouTubeIframeAPIReady();
+  } else {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  }
+}
+
 // ---------- start ----------
 
 async function start() {
@@ -970,6 +1046,8 @@ async function start() {
   $('#logo').hidden = false;
   $('#aboutBtn').hidden = false;
   $('#leaveBtn').hidden = false;
+  $('#sound').hidden = false;
+  setupSound();
 
   // Arrive gently: start pulled back, then ease in toward the first flower.
   const first = state.flowers[0];

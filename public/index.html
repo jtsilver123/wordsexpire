@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=11" />
+    <link rel="stylesheet" href="/styles.css?v=12" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -59,6 +59,20 @@
       <span class="compass-arrow" id="compassArrow">→</span>
       <span class="compass-label">back to the flowers</span>
     </button>
+
+    <!-- Ambient sound: on/off with a small volume slider. Starts off. -->
+    <div class="sound" id="sound" hidden>
+      <button type="button" class="sound-toggle" id="soundToggle" aria-label="play ambient sound" aria-pressed="false">
+        <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path class="sp-body" d="M4 9h3.5L13 4.5v15L7.5 15H4z" />
+          <path class="sp-wave sp-wave1" d="M15.5 8.5a5 5 0 0 1 0 7" />
+          <path class="sp-wave sp-wave2" d="M18 6a8.5 8.5 0 0 1 0 12" />
+          <line class="sp-slash" x1="4" y1="20" x2="20" y2="4" />
+        </svg>
+      </button>
+      <input type="range" id="soundVol" class="sound-vol" min="0" max="100" value="45" aria-label="volume" />
+    </div>
+    <div id="yt" class="yt-hidden" aria-hidden="true"></div>
 
     <p class="hint" id="hint" hidden></p>
     <p class="signature">a small note will fade unless others keep it alive</p>
@@ -189,6 +203,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=11" type="module"></script>
+    <script src="/app.js?v=12" type="module"></script>
   </body>
 </html>

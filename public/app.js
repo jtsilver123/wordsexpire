@@ -553,6 +553,7 @@ async function keepAlive(e) {
   $('.keep').classList.add('kept');
   $('#keepLabel').textContent = body.alreadyKept ? 'already kept alive' : 'renewed';
   $('#petalLife').textContent = petalLife(body.petal);
+  if (!body.alreadyKept) playRenewFx();
 
   const petal = body.petal;
   const flower = state.flowers.find((f) => f.petals.some((p) => p.id === petal.id));
@@ -567,7 +568,17 @@ async function keepAlive(e) {
   }
 
   // The petal updated in place above, so just close, no full-garden rebuild.
-  setTimeout(() => closeOverlay($('#reader')), 1100);
+  // Give the sunlight-and-water animation room to finish before closing.
+  setTimeout(() => closeOverlay($('#reader')), body.alreadyKept ? 1100 : 1900);
+}
+
+// Plays the sunlight-and-water renewal once. Re-adding the class after a
+// reflow restarts the animation on every keep-alive.
+function playRenewFx() {
+  const fx = $('#renewFx');
+  fx.classList.remove('play');
+  void fx.offsetWidth;
+  fx.classList.add('play');
 }
 
 // ---------- leaving a petal ----------
@@ -754,7 +765,10 @@ function runOnboarding() {
     const begin = $('#begin');
 
     lines.forEach((line, i) => setTimeout(() => line.classList.add('show'), 600 + i * 1900));
-    setTimeout(() => (begin.hidden = false), 600 + lines.length * 1900);
+    setTimeout(() => {
+      begin.hidden = false;
+      requestAnimationFrame(() => begin.classList.add('show'));
+    }, 600 + lines.length * 1900);
 
     begin.addEventListener('click', () => {
       localStorage.setItem('we_seen_onboarding', '1');

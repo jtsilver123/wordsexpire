@@ -517,6 +517,153 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 0.7rem;
+  position: relative;
+}
+
+/* The sunlight-and-water renewal: warm rays and a soft sun bloom behind the
+   drop, cool ripples spreading, and a few droplets falling. Plays once when
+   the .play class is added. */
+.renew-fx {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.renew-fx > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.fx-sun {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(240, 213, 138, 0.9) 0%,
+    rgba(240, 213, 138, 0.4) 35%,
+    rgba(240, 213, 138, 0) 70%
+  );
+}
+
+.fx-rays {
+  width: 184px;
+  height: 184px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(242, 214, 140, 0.55) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 16%, rgba(0, 0, 0, 0.5) 38%, transparent 66%);
+  mask: radial-gradient(circle, #000 16%, rgba(0, 0, 0, 0.5) 38%, transparent 66%);
+}
+
+.fx-ripple {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(166, 184, 199, 0.75);
+}
+
+.fx-ripple2 {
+  border-color: rgba(166, 184, 199, 0.5);
+}
+
+.fx-drop {
+  width: 7px;
+  height: 7px;
+  background: rgba(150, 173, 192, 0.95);
+  border-radius: 60% 60% 60% 60% / 75% 75% 50% 50%;
+}
+
+.renew-fx.play .fx-sun {
+  animation: sunBloom 1500ms var(--ease);
+}
+.renew-fx.play .fx-rays {
+  animation: rayBloom 1600ms var(--ease);
+}
+.renew-fx.play .fx-ripple {
+  animation: ripple 1300ms var(--ease);
+}
+.renew-fx.play .fx-ripple2 {
+  animation: ripple 1500ms var(--ease) 240ms;
+}
+.renew-fx.play .fx-drop1 {
+  animation: dropFall 1200ms var(--ease) 80ms;
+}
+.renew-fx.play .fx-drop2 {
+  animation: dropFall 1300ms var(--ease) 260ms;
+}
+.renew-fx.play .fx-drop3 {
+  animation: dropFall 1150ms var(--ease) 440ms;
+}
+
+@keyframes sunBloom {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes rayBloom {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5) rotate(16deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.4);
+    opacity: 0;
+  }
+}
+
+@keyframes dropFall {
+  0% {
+    transform: translate(-50%, -150%) rotate(45deg) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 320%) rotate(45deg) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Spread the droplets out a little. */
+.fx-drop1 {
+  margin-left: -14px;
+}
+.fx-drop3 {
+  margin-left: 14px;
 }
 
 .drop {
@@ -524,10 +671,12 @@ body {
   height: 44px;
   border-radius: 50%;
   border: 1px solid var(--hairline);
-  background: transparent;
+  background: var(--surface);
   cursor: pointer;
   display: grid;
   place-items: center;
+  position: relative;
+  z-index: 3;
   transition: box-shadow var(--slow) var(--ease), border-color var(--slow) var(--ease),
     transform var(--slow) var(--ease);
 }
@@ -751,6 +900,14 @@ textarea:focus {
 
 #begin {
   font-size: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1400ms var(--ease);
+}
+
+#begin.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 [hidden] {

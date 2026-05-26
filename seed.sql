@@ -7,19 +7,21 @@ INSERT OR IGNORE INTO flowers (id, max_petals, created_at, theme) VALUES
   ('33333333-3333-4333-8333-333333333333', 7, strftime('%s','now'), 'what are you grateful for?');
 
 -- spoken_at lets a note carry the date its words were first said.
--- Two of the starters reach back in time; one was spoken today.
-INSERT OR IGNORE INTO petals (id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count) VALUES
+-- medium / direction / relationship hold the gentle context of the words.
+INSERT OR IGNORE INTO petals
+  (id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, last_renewed_at, reaction_count)
+VALUES
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
    '11111111-1111-4111-8111-111111111111',
    'I''ve been carrying this for a long time.',
-   'rose', strftime('%s','now'), strftime('%s','now','-6 years'), strftime('%s','now'), 0),
+   'rose', strftime('%s','now'), strftime('%s','now','-6 years'), NULL, NULL, NULL, strftime('%s','now'), 0),
 
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
    '22222222-2222-4222-8222-222222222222',
    'I forgive you, even though you didn''t ask.',
-   'lavender', strftime('%s','now'), strftime('%s','now','-2 years'), strftime('%s','now'), 0),
+   'lavender', strftime('%s','now'), strftime('%s','now','-2 years'), 'in_person', 'gave', 'father', strftime('%s','now'), 0),
 
   ('cccccccc-cccc-4ccc-8ccc-cccccccccccc',
    '33333333-3333-4333-8333-333333333333',
    'The morning light still finds me, and that is enough.',
-   'gold', strftime('%s','now'), strftime('%s','now'), strftime('%s','now'), 0);
+   'gold', strftime('%s','now'), strftime('%s','now'), NULL, NULL, NULL, strftime('%s','now'), 0);

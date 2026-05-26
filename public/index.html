@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <title>WordsExpire</title>
     <meta
       name="description"
@@ -27,24 +27,36 @@
       <button id="begin" class="text-link" hidden>begin</button>
     </div>
 
-    <main id="stage" class="stage" hidden>
-      <button class="nav nav-prev" id="navPrev" aria-label="another flower">‹</button>
+    <!-- The garden is a single, never-ending field. Drag to wander, scroll to zoom. -->
+    <div id="viewport" class="viewport" hidden>
+      <div id="world" class="world"></div>
+    </div>
 
-      <section class="bloom" id="bloom" aria-live="polite">
-        <p class="theme" id="theme"></p>
-        <div class="flower-holder" id="flowerHolder"></div>
-        <p class="hint" id="hint"></p>
-      </section>
+    <button class="corner-link" id="aboutBtn" hidden>the garden</button>
 
-      <button class="nav nav-next" id="navNext" aria-label="another flower">›</button>
+    <p class="hint" id="hint" hidden></p>
+    <p class="signature">a small note will fade unless others keep it alive</p>
 
-      <p class="signature">a small note will fade unless others keep it alive</p>
-    </main>
+    <!-- The reflection, and the garden's living numbers. -->
+    <div id="about" class="overlay" hidden>
+      <div class="card about-card" role="dialog" aria-modal="true">
+        <p class="about-reflection">
+          Nothing here lasts on its own. Words fade, the way words do; what stays is only what
+          someone came back to tend. Like a garden — like any love — it lives by being watered.
+        </p>
+        <div class="stats" id="stats"></div>
+        <button class="text-link close" data-close>close</button>
+      </div>
+    </div>
+
+    <!-- The full text of a petal, on hover. -->
+    <div id="petalTip" class="petal-tip" hidden></div>
 
     <!-- Reading a petal. -->
     <div id="reader" class="overlay" hidden>
       <div class="card reader-card" role="dialog" aria-modal="true">
         <p class="petal-text" id="petalText"></p>
+        <p class="petal-context" id="petalContext" hidden></p>
         <p class="petal-spoken" id="petalSpoken" hidden></p>
         <div class="keep">
           <button class="drop" id="keepBtn" aria-label="keep alive">
@@ -65,11 +77,66 @@
           <div class="gate" aria-hidden="true">
             <label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
           </div>
-          <textarea id="composeText" maxlength="280" rows="4" aria-label="your note"></textarea>
-          <label class="when" for="composeWhen">
-            <span>when were these words said?</span>
-            <input type="date" id="composeWhen" />
-          </label>
+          <textarea id="composeText" maxlength="280" rows="3" aria-label="your note"></textarea>
+
+          <details class="details" id="details">
+            <summary>add a little context</summary>
+            <div class="fields">
+              <label class="field">
+                <span>when were these words said?</span>
+                <input type="date" id="composeWhen" />
+              </label>
+              <label class="field">
+                <span>how were they said?</span>
+                <select id="composeMedium">
+                  <option value="">—</option>
+                  <option value="in_person">in person</option>
+                  <option value="text">a text</option>
+                  <option value="call">a phone call</option>
+                  <option value="video">a video call</option>
+                  <option value="email">an email</option>
+                  <option value="letter">a letter</option>
+                  <option value="other">some other way</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>were you…</span>
+                <select id="composeDirection">
+                  <option value="">—</option>
+                  <option value="gave">the one who said it</option>
+                  <option value="received">the one who heard it</option>
+                </select>
+              </label>
+              <label class="field">
+                <span id="whomLabel">with whom?</span>
+                <select id="composeRelationship">
+                  <option value="">—</option>
+                  <optgroup label="a partner">
+                    <option value="wife">my wife</option>
+                    <option value="husband">my husband</option>
+                    <option value="partner">my partner</option>
+                  </optgroup>
+                  <optgroup label="family">
+                    <option value="mother">my mother</option>
+                    <option value="father">my father</option>
+                    <option value="daughter">my daughter</option>
+                    <option value="son">my son</option>
+                    <option value="sister">my sister</option>
+                    <option value="brother">my brother</option>
+                    <option value="grandmother">my grandmother</option>
+                    <option value="grandfather">my grandfather</option>
+                  </optgroup>
+                  <optgroup label="someone else">
+                    <option value="friend">a friend</option>
+                    <option value="stranger">a stranger</option>
+                    <option value="myself">myself</option>
+                    <option value="someone_else">someone else</option>
+                  </optgroup>
+                </select>
+              </label>
+            </div>
+          </details>
+
           <div class="compose-foot">
             <span class="counter" id="counter" hidden></span>
             <button type="submit" class="text-link place" id="placeBtn">place it</button>

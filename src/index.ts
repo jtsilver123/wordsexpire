@@ -24,6 +24,31 @@ const DAY = 86400;
 // Petal colors, rotated softly. The frontend maps these keys to hues.
 const COLORS = ['rose', 'sage', 'lavender', 'gold', 'sky'] as const;
 
+// Optional context a note may carry. Values are validated against these sets;
+// anything unrecognized is simply dropped.
+const MEDIUMS = new Set(['in_person', 'text', 'call', 'video', 'email', 'letter', 'other']);
+const DIRECTIONS = new Set(['gave', 'received']);
+const RELATIONSHIPS = new Set([
+  'mother', 'father', 'daughter', 'son', 'sister', 'brother',
+  'wife', 'husband', 'partner', 'grandmother', 'grandfather',
+  'friend', 'stranger', 'myself', 'someone_else',
+]);
+
+function clean(value: unknown, allowed: Set<string>): string | null {
+  return typeof value === 'string' && allowed.has(value) ? value : null;
+}
+
+// Gentle themes for flowers the garden grows on its own when all others are full.
+const THEMES = [
+  'what are you carrying?',
+  'what would you forgive?',
+  'what are you grateful for?',
+  'what did you never get to say?',
+  'what do you hope for?',
+  'what are you letting go of?',
+  null,
+];
+
 const app = new Hono<{ Bindings: Bindings }>();
 
 // --- helpers -----------------------------------------------------------------
@@ -53,6 +78,9 @@ type PetalRow = {
   color: string;
   created_at: number;
   spoken_at: number;
+  medium: string | null;
+  direction: string | null;
+  relationship: string | null;
   last_renewed_at: number;
   reaction_count: number;
 };
@@ -65,11 +93,17 @@ function shapePetal(p: PetalRow, at: number) {
     color: p.color,
     createdAt: p.created_at,
     spokenAt: p.spoken_at,
+    medium: p.medium,
+    direction: p.direction,
+    relationship: p.relationship,
     aliveness: a,
     // Once aliveness hits zero a petal lingers faintly through the grace window.
     isGhost: a <= 0,
   };
 }
+
+const PETAL_COLUMNS =
+  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, last_renewed_at, reaction_count';
 
 // Lazily clear petals that have outlived even their grace period.
 async function sweep(db: D1Database, at: number): Promise<void> {
@@ -107,8 +141,8 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 
   const { results } = await db
     .prepare(
-      'SELECT id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count ' +
-        'FROM petals WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ? ' +
+      `SELECT ${PETAL_COLUMNS} FROM petals ` +
+        'WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ? ' +
         'ORDER BY created_at ASC',
     )
     .bind(flowerId, at - TOTAL)
@@ -126,9 +160,28 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 
 // --- public API --------------------------------------------------------------
 
+// The garden keeps at least one flower with room, growing a fresh one
+// (no rate limit — this is the garden's own doing) whenever all are full.
+async function ensureOpenFlower(db: D1Database, at: number): Promise<void> {
+  const { results } = await db.prepare('SELECT id, max_petals FROM flowers').all<{ id: string; max_petals: number }>();
+  for (const f of results ?? []) {
+    const row = await db
+      .prepare('SELECT COUNT(*) AS n FROM petals WHERE flower_id = ? AND deleted_at IS NULL AND last_renewed_at >= ?')
+      .bind(f.id, at - TOTAL)
+      .first<{ n: number }>();
+    if ((row?.n ?? 0) < f.max_petals) return; // a flower still has room
+  }
+  const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+  await db
+    .prepare('INSERT INTO flowers (id, max_petals, created_at, theme) VALUES (?, ?, ?, ?)')
+    .bind(uuid(), 6, at, theme)
+    .run();
+}
+
 app.get('/api/flowers', async (c) => {
   const at = now();
   await sweep(c.env.DB, at);
+  await ensureOpenFlower(c.env.DB, at);
   const { results } = await c.env.DB.prepare('SELECT id FROM flowers ORDER BY created_at ASC').all<{ id: string }>();
   const flowers = [];
   for (const { id } of results ?? []) {
@@ -136,6 +189,33 @@ app.get('/api/flowers', async (c) => {
     if (flower) flowers.push(flower);
   }
   return c.json({ flowers });
+});
+
+// Aggregate, never personal: a quiet sense of the whole garden's weather.
+app.get('/api/stats', async (c) => {
+  const at = now();
+  const db = c.env.DB;
+  const alive = await db
+    .prepare('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?')
+    .bind(at - TOTAL)
+    .first<{ n: number }>();
+  const flowers = await db.prepare('SELECT COUNT(*) AS n FROM flowers').first<{ n: number }>();
+  const kept = await db.prepare('SELECT COALESCE(SUM(reaction_count), 0) AS n FROM petals').first<{ n: number }>();
+  const faded = await db.prepare('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NOT NULL').first<{ n: number }>();
+  const oldest = await db
+    .prepare('SELECT MIN(spoken_at) AS t FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?')
+    .bind(at - TOTAL)
+    .first<{ t: number | null }>();
+
+  return c.json({
+    stats: {
+      petalsAlive: alive?.n ?? 0,
+      flowers: flowers?.n ?? 0,
+      keptAlive: kept?.n ?? 0,
+      faded: faded?.n ?? 0,
+      oldestSpokenAt: oldest?.t ?? null,
+    },
+  });
 });
 
 app.get('/api/flowers/:id', async (c) => {
@@ -176,20 +256,32 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const ipHash = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
 
   const body = await c.req
-    .json<{ text?: string; website?: string; spokenAt?: number }>()
-    .catch(() => ({}) as { text?: string; website?: string; spokenAt?: number });
+    .json<{
+      text?: string;
+      website?: string;
+      spokenAt?: number;
+      medium?: string;
+      direction?: string;
+      relationship?: string;
+    }>()
+    .catch(() => ({}) as Record<string, unknown>);
   // Honeypot: a hidden field humans never fill. Pretend it worked, plant nothing.
-  if (body.website) return c.json({ message: 'Thank you for that.' }, 200);
+  if ((body as { website?: string }).website) return c.json({ message: 'Thank you for that.' }, 200);
 
-  const text = (body.text ?? '').trim();
+  const text = ((body as { text?: string }).text ?? '').trim();
   if (!text) return c.json({ message: 'There were no words to leave.' }, 400);
   if (text.length > MAX_TEXT) return c.json({ message: 'That was a little too long to hold.' }, 400);
   if (isBlocked(text)) return c.json({ message: 'Something held it back. Try different words.' }, 422);
 
   // When the words were first said. Defaults to today; one may reach back, never forward.
-  let spokenAt = Number(body.spokenAt);
+  let spokenAt = Number((body as { spokenAt?: number }).spokenAt);
   if (!Number.isFinite(spokenAt)) spokenAt = at;
   spokenAt = Math.min(Math.max(Math.floor(spokenAt), 0), at);
+
+  // Optional, gently held context. Unknown values are dropped.
+  const medium = clean((body as { medium?: unknown }).medium, MEDIUMS);
+  const direction = clean((body as { direction?: unknown }).direction, DIRECTIONS);
+  const relationship = clean((body as { relationship?: unknown }).relationship, RELATIONSHIPS);
 
   if (await rateExceeded(c.env.DB, ipHash, 'petal', PETALS_PER_HOUR, HOUR, at)) {
     return c.json({ message: 'You have left several already. Come back in a while.' }, 429);
@@ -202,16 +294,29 @@ app.post('/api/flowers/:id/petals', async (c) => {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const id = uuid();
   await c.env.DB.prepare(
-    'INSERT INTO petals (id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+    'INSERT INTO petals (id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, last_renewed_at, reaction_count) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
   )
-    .bind(id, flowerId, text, color, at, spokenAt, at)
+    .bind(id, flowerId, text, color, at, spokenAt, medium, direction, relationship, at)
     .run();
   await logRate(c.env.DB, ipHash, 'petal', at);
 
   return c.json(
     {
       petal: shapePetal(
-        { id, flower_id: flowerId, text, color, created_at: at, spoken_at: spokenAt, last_renewed_at: at, reaction_count: 0 },
+        {
+          id,
+          flower_id: flowerId,
+          text,
+          color,
+          created_at: at,
+          spoken_at: spokenAt,
+          medium,
+          direction,
+          relationship,
+          last_renewed_at: at,
+          reaction_count: 0,
+        },
         at,
       ),
     },
@@ -228,9 +333,7 @@ app.post('/api/petals/:id/react', async (c) => {
     return c.json({ message: 'Let the garden breathe for a moment.' }, 429);
   }
 
-  const petal = await c.env.DB.prepare(
-    'SELECT id, flower_id, text, color, created_at, spoken_at, last_renewed_at, reaction_count FROM petals WHERE id = ? AND deleted_at IS NULL',
-  )
+  const petal = await c.env.DB.prepare(`SELECT ${PETAL_COLUMNS} FROM petals WHERE id = ? AND deleted_at IS NULL`)
     .bind(petalId)
     .first<PetalRow>();
   if (!petal) return c.json({ message: 'That petal has already gone.' }, 404);

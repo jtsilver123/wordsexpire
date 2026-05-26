@@ -1,5 +1,5 @@
-// WordsExpire — the garden, drawn and tended in the browser.
-// No framework, no build step. Just gentle DOM.
+// WordsExpire — a never-ending garden you can wander and zoom through.
+// No framework, no build step. Just gentle DOM and a little arithmetic.
 
 const COLORS = {
   rose: '#d9a6a0',
@@ -10,28 +10,51 @@ const COLORS = {
 };
 const WILTED = [185, 178, 168]; // warm gray a fading petal drifts toward
 
+// How a note's context reads back, gently, in the reading card.
+const RELATIONSHIP_LABEL = {
+  wife: 'my wife', husband: 'my husband', partner: 'my partner',
+  mother: 'my mother', father: 'my father', daughter: 'my daughter', son: 'my son',
+  sister: 'my sister', brother: 'my brother', grandmother: 'my grandmother', grandfather: 'my grandfather',
+  friend: 'a friend', stranger: 'a stranger', myself: 'myself', someone_else: 'someone else',
+};
+const MEDIUM_PHRASE = {
+  in_person: 'in person', text: 'by text', call: 'by phone', video: 'over video',
+  email: 'by email', letter: 'in a letter', other: '',
+};
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // the angle seeds settle into
+const SPACING = 560; // world distance between successive flowers
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state = {
   flowers: [],
-  index: 0,
   openPetalId: null,
+  openPetalEl: null,
+  composeFlowerId: null,
 };
+
+// The world transform: where we are and how close.
+const view = { x: 0, y: 0, scale: 1 };
+let tweenToken = 0;
+let moved = false; // did the last gesture drag, rather than tap?
 
 // ---------- tiny helpers ----------
 
 const $ = (sel) => document.querySelector(sel);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
 // A small, stable pseudo-random number in [0,1) from a string seed,
-// so each petal keeps the same gentle imperfections across renders.
+// so each flower and petal keeps the same gentle imperfections.
 function seeded(seed, salt = 0) {
   let h = 2166136261 ^ salt;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  h = (h >>> 0) / 4294967295;
-  return h;
+  return (h >>> 0) / 4294967295;
 }
 
 function hexToRgb(hex) {
@@ -42,20 +65,21 @@ function hexToRgb(hex) {
 // Blend a petal's color toward warm gray as it loses aliveness.
 function fadeColor(hex, aliveness) {
   const [r, g, b] = hexToRgb(hex);
-  const t = (1 - Math.max(0, Math.min(1, aliveness))) * 0.7; // up to ~70% desaturated
+  const t = (1 - clamp(aliveness, 0, 1)) * 0.7;
   const mix = (c, w) => Math.round(c + (w - c) * t);
   return `rgb(${mix(r, WILTED[0])}, ${mix(g, WILTED[1])}, ${mix(b, WILTED[2])})`;
 }
 
-// Has this note's words been carried from an earlier day than it was placed?
-// We only surface the date when it reaches meaningfully back in time.
 function isBackdated(petal) {
   return petal.spokenAt && petal.createdAt - petal.spokenAt > 72000; // ~20 hours
 }
 
 function formatSpoken(epochSeconds) {
-  const d = new Date(epochSeconds * 1000);
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(epochSeconds * 1000).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 function todayInputValue() {
@@ -64,11 +88,25 @@ function todayInputValue() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// "said to my father · in person", and so on — only from what was offered.
+function contextLine(p) {
+  const parts = [];
+  const rel = RELATIONSHIP_LABEL[p.relationship];
+  if (p.direction === 'gave') parts.push(rel ? `said to ${rel}` : 'I said it');
+  else if (p.direction === 'received') parts.push(rel ? `heard from ${rel}` : 'it was said to me');
+  else if (rel) parts.push(`with ${rel}`);
+  const med = MEDIUM_PHRASE[p.medium];
+  if (med) parts.push(med);
+  return parts.join(' · ');
+}
+
+function snippet(text) {
+  const s = text.trim().replace(/\s+/g, ' ');
+  return s.length > 13 ? `${s.slice(0, 13).trimEnd()}…` : s;
+}
+
 async function api(path, options) {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+  const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
   let body = {};
   try {
     body = await res.json();
@@ -78,13 +116,28 @@ async function api(path, options) {
   return { ok: res.ok, status: res.status, body };
 }
 
+// ---------- placing flowers in the world ----------
+
+// A phyllotaxis spiral: flowers settle outward the way seeds do in a head,
+// evenly spaced and never repeating, so the field can grow without end.
+function flowerPosition(index) {
+  const r = SPACING * Math.sqrt(index);
+  const a = index * GOLDEN;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}
+
 // ---------- drawing a flower ----------
 
-// One petal path in local coordinates: base at origin, reaching upward,
-// with a little asymmetry so nothing looks machined.
+function makeEl(tag, attrs = {}) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+// One petal path in local coordinates: base at origin, reaching upward.
 function petalPath(seed) {
-  const len = 104 + seeded(seed, 1) * 26; // length of the petal
-  const wide = 30 + seeded(seed, 2) * 12; // half-width at the belly
+  const len = 104 + seeded(seed, 1) * 26;
+  const wide = 30 + seeded(seed, 2) * 12;
   const leanL = wide * (0.85 + seeded(seed, 3) * 0.3);
   const leanR = wide * (0.85 + seeded(seed, 4) * 0.3);
   const tip = len * (0.92 + seeded(seed, 5) * 0.12);
@@ -95,18 +148,19 @@ function petalPath(seed) {
   );
 }
 
-function makeEl(tag, attrs = {}) {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
-}
-
-function drawFlower(flower) {
+function drawFlowerSvg(flower) {
   const size = 400;
   const cx = size / 2;
   const cy = size / 2;
   const svg = makeEl('svg', { viewBox: `0 0 ${size} ${size}`, role: 'img' });
   svg.setAttribute('aria-label', 'a flower holding small notes');
+
+  const defs = makeEl('defs');
+  const grad = makeEl('radialGradient', { id: `heart-${flower.id}` });
+  grad.appendChild(makeEl('stop', { offset: '0%', 'stop-color': '#efe2c8' }));
+  grad.appendChild(makeEl('stop', { offset: '100%', 'stop-color': '#d9c99e' }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
 
   const sway = makeEl('g', { class: 'flower-sway' });
   svg.appendChild(sway);
@@ -117,10 +171,8 @@ function drawFlower(flower) {
   for (let i = 0; i < slots; i++) {
     const petal = petals[i];
     const slotSeed = `${flower.id}-${i}`;
-    const angle = (360 / slots) * i + (seeded(slotSeed, 7) - 0.5) * 10; // gentle jitter
-    const g = makeEl('g', {
-      transform: `translate(${cx} ${cy}) rotate(${angle})`,
-    });
+    const angle = (360 / slots) * i + (seeded(slotSeed, 7) - 0.5) * 10;
+    const g = makeEl('g', { transform: `translate(${cx} ${cy}) rotate(${angle})` });
 
     if (petal) {
       const path = makeEl('path', {
@@ -130,16 +182,35 @@ function drawFlower(flower) {
         stroke: 'rgba(58,51,44,0.10)',
         'stroke-width': '1',
       });
-      // Aliveness shows as fullness: fresh petals are present, faded ones recede.
       path.style.opacity = petal.isGhost ? '0.14' : String(0.4 + 0.6 * petal.aliveness);
       path.dataset.petalId = petal.id;
-      path.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openReader(petal, path);
+
+      // A truncated preview, kept upright; the whole note waits on hover or touch.
+      const len = 104 + seeded(petal.id, 1) * 26;
+      const label = makeEl('text', {
+        class: 'petal-label',
+        x: 0,
+        y: -len * 0.52,
+        'text-anchor': 'middle',
+        transform: `rotate(${-angle} 0 ${-len * 0.52})`,
       });
+      label.textContent = snippet(petal.text);
+      label.style.opacity = petal.isGhost ? '0.18' : String(0.35 + 0.45 * petal.aliveness);
+
+      const open = (e) => {
+        e.stopPropagation();
+        if (moved) return;
+        openReader(petal, path);
+      };
+      for (const el of [path, label]) {
+        el.addEventListener('click', open);
+        el.addEventListener('mouseenter', () => showTip(petal.text, path));
+        el.addEventListener('mouseleave', hideTip);
+        el.style.cursor = 'pointer';
+      }
       g.appendChild(path);
+      g.appendChild(label);
     } else {
-      // An empty slot: a faint outline, a held breath.
       const path = makeEl('path', {
         d: petalPath(slotSeed),
         class: 'petal empty',
@@ -149,27 +220,13 @@ function drawFlower(flower) {
         'stroke-dasharray': '3 6',
       });
       path.style.opacity = '0.6';
-      if (flower.hasRoom) {
-        path.style.cursor = 'pointer';
-        path.classList.remove('empty');
-        path.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openComposer();
-        });
-      }
       g.appendChild(path);
     }
     sway.appendChild(g);
   }
 
-  // The heart of the flower — where a new note begins.
+  // The heart of the flower — touch it to leave a note.
   const heart = makeEl('g', { class: 'heart' + (flower.hasRoom ? ' has-room' : '') });
-  const grad = makeEl('radialGradient', { id: `heart-${flower.id}` });
-  grad.appendChild(makeEl('stop', { offset: '0%', 'stop-color': '#efe2c8' }));
-  grad.appendChild(makeEl('stop', { offset: '100%', 'stop-color': '#d9c99e' }));
-  const defs = makeEl('defs');
-  defs.appendChild(grad);
-  svg.appendChild(defs);
   const core = makeEl('circle', {
     class: 'heart-core',
     cx,
@@ -179,50 +236,187 @@ function drawFlower(flower) {
     stroke: 'rgba(58,51,44,0.08)',
     'stroke-width': '1',
   });
+  heart.style.cursor = 'pointer';
+  heart.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (moved) return;
+    openComposer(flower);
+  });
   heart.appendChild(core);
-  if (flower.hasRoom) {
-    heart.addEventListener('click', openComposer);
-  }
   svg.appendChild(heart);
 
   return svg;
 }
 
-// ---------- rendering the stage ----------
+function buildFlowerNode(flower, index) {
+  const node = document.createElement('div');
+  node.className = 'flower';
+  node.dataset.flowerId = flower.id;
+  const pos = flowerPosition(index);
+  node.style.left = `${pos.x}px`;
+  node.style.top = `${pos.y}px`;
 
-function render() {
-  const flower = state.flowers[state.index];
-  const holder = $('#flowerHolder');
-  holder.innerHTML = '';
+  if (flower.theme) {
+    const theme = document.createElement('p');
+    theme.className = 'flower-theme';
+    theme.textContent = flower.theme;
+    node.appendChild(theme);
+  }
+  node.appendChild(drawFlowerSvg(flower));
+  return node;
+}
 
-  if (!flower) {
-    $('#theme').textContent = '';
-    $('#hint').textContent = 'The garden is quiet just now.';
+function renderWorld() {
+  const world = $('#world');
+  world.innerHTML = '';
+  state.flowers.forEach((flower, i) => world.appendChild(buildFlowerNode(flower, i)));
+}
+
+function setFlowers(list) {
+  state.flowers = list || [];
+  renderWorld();
+}
+
+// ---------- the view (pan / zoom) ----------
+
+function applyView() {
+  $('#world').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+}
+
+function focusOn(worldX, worldY, scale, ms = 900) {
+  const target = {
+    scale,
+    x: window.innerWidth / 2 - worldX * scale,
+    y: window.innerHeight / 2 - worldY * scale,
+  };
+  if (reduceMotion || ms === 0) {
+    Object.assign(view, target);
+    applyView();
     return;
   }
-
-  $('#theme').textContent = flower.theme || '';
-  holder.appendChild(drawFlower(flower));
-
-  if (flower.petals.length === 0) {
-    $('#hint').textContent = 'This flower waits for its first word.';
-  } else if (flower.hasRoom) {
-    $('#hint').textContent = 'touch a petal to read it · touch the center to leave one';
-  } else {
-    $('#hint').textContent = 'this flower is full — find another';
+  const start = { ...view };
+  const token = ++tweenToken;
+  const t0 = performance.now();
+  function step(t) {
+    if (token !== tweenToken) return; // a newer move (or a drag) took over
+    const k = clamp((t - t0) / ms, 0, 1);
+    const e = easeInOut(k);
+    view.scale = lerp(start.scale, target.scale, e);
+    view.x = lerp(start.x, target.x, e);
+    view.y = lerp(start.y, target.y, e);
+    applyView();
+    if (k < 1) requestAnimationFrame(step);
   }
+  requestAnimationFrame(step);
+}
 
-  const many = state.flowers.length > 1;
-  $('#navPrev').hidden = !many;
-  $('#navNext').hidden = !many;
+function focusFlower(flowerId, scale = 1.05) {
+  const i = state.flowers.findIndex((f) => f.id === flowerId);
+  if (i < 0) return;
+  const pos = flowerPosition(i);
+  focusOn(pos.x, pos.y, scale);
+}
+
+function zoomAt(cx, cy, factor) {
+  tweenToken++; // cancel any tween
+  const newScale = clamp(view.scale * factor, 0.15, 3.2);
+  const k = newScale / view.scale;
+  view.x = cx - (cx - view.x) * k;
+  view.y = cy - (cy - view.y) * k;
+  view.scale = newScale;
+  applyView();
+}
+
+function wireWorld() {
+  const vp = $('#viewport');
+  const pointers = new Map();
+  let last = { x: 0, y: 0 };
+  let pinchDist = 0;
+
+  vp.addEventListener('pointerdown', (e) => {
+    tweenToken++; // stop any easing the moment a hand touches the world
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = false;
+    if (pointers.size === 1) last = { x: e.clientX, y: e.clientY };
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+    // Note: no pointer capture — it would retarget the synthesized click away
+    // from a petal, breaking tap-to-read. Events bubble to the viewport anyway.
+  });
+
+  vp.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.size >= 2) {
+      const [a, b] = [...pointers.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchDist > 0) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, dist / pinchDist);
+      pinchDist = dist;
+      moved = true;
+      return;
+    }
+
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    if (Math.hypot(dx, dy) > 3) moved = true;
+    view.x += dx;
+    view.y += dy;
+    last = { x: e.clientX, y: e.clientY };
+    applyView();
+  });
+
+  const release = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 1) {
+      const p = [...pointers.values()][0];
+      last = { x: p.x, y: p.y };
+    }
+    pinchDist = 0;
+  };
+  vp.addEventListener('pointerup', release);
+  vp.addEventListener('pointercancel', release);
+
+  vp.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015));
+    },
+    { passive: false },
+  );
+
+  window.addEventListener('resize', applyView);
+}
+
+// ---------- the hover tooltip ----------
+
+function showTip(text, el) {
+  const tip = $('#petalTip');
+  tip.textContent = text;
+  const r = el.getBoundingClientRect();
+  tip.style.left = `${r.left + r.width / 2}px`;
+  tip.style.top = `${r.top + r.height / 2}px`;
+  tip.hidden = false;
+}
+function hideTip() {
+  $('#petalTip').hidden = true;
 }
 
 // ---------- reading a petal ----------
 
 function openReader(petal, pathEl) {
+  hideTip();
   state.openPetalId = petal.id;
   state.openPetalEl = pathEl;
   $('#petalText').textContent = petal.text;
+
+  const context = contextLine(petal);
+  const ctxEl = $('#petalContext');
+  ctxEl.textContent = context;
+  ctxEl.hidden = !context;
 
   const spoken = $('#petalSpoken');
   if (isBackdated(petal)) {
@@ -232,17 +426,15 @@ function openReader(petal, pathEl) {
     spoken.hidden = true;
   }
 
-  const keep = $('.keep');
-  keep.classList.remove('kept');
+  $('.keep').classList.remove('kept');
   $('#keepLabel').textContent = 'keep alive';
   $('#keepBtn').disabled = false;
-  show($('#reader'));
+  $('#reader').hidden = false;
 }
 
 async function keepAlive() {
   if (!state.openPetalId) return;
-  const btn = $('#keepBtn');
-  btn.disabled = true;
+  $('#keepBtn').disabled = true;
 
   const { ok, body } = await api(`/api/petals/${state.openPetalId}/react`, { method: 'POST' });
   if (!ok) {
@@ -250,12 +442,11 @@ async function keepAlive() {
     return;
   }
 
-  // The petal glows and settles, a little renewed.
   $('.keep').classList.add('kept');
   $('#keepLabel').textContent = body.alreadyKept ? 'already kept alive' : 'renewed';
 
   const petal = body.petal;
-  const flower = state.flowers[state.index];
+  const flower = state.flowers.find((f) => f.petals.some((p) => p.id === petal.id));
   if (flower) {
     const found = flower.petals.find((p) => p.id === petal.id);
     if (found) Object.assign(found, petal);
@@ -267,35 +458,52 @@ async function keepAlive() {
   }
 
   setTimeout(() => {
-    hide($('#reader'));
-    render();
+    $('#reader').hidden = true;
+    renderWorld();
   }, 1100);
 }
 
 // ---------- leaving a petal ----------
 
-function openComposer() {
-  const flower = state.flowers[state.index];
-  if (!flower || !flower.hasRoom) return;
+async function openComposer(flower) {
+  let target = flower;
+  if (!target || !target.hasRoom) {
+    target = state.flowers.find((f) => f.hasRoom);
+    if (!target) {
+      // All full — let the garden grow a fresh one, then go to it.
+      const { ok, body } = await api('/api/flowers');
+      if (ok && body.flowers) setFlowers(body.flowers);
+      target = state.flowers.find((f) => f.hasRoom);
+    }
+  }
+  if (!target) return;
+
+  state.composeFlowerId = target.id;
+  focusFlower(target.id, 1.15);
+
   $('#composeText').value = '';
-  const when = $('#composeWhen');
-  when.max = todayInputValue(); // never forward in time
-  when.value = todayInputValue(); // defaults to today
+  $('#composeWhen').max = todayInputValue();
+  $('#composeWhen').value = todayInputValue();
+  $('#composeMedium').value = '';
+  $('#composeDirection').value = '';
+  $('#composeRelationship').value = '';
+  $('#whomLabel').textContent = 'with whom?';
+  $('#details').open = false;
   $('#composeForm').hidden = false;
   $('#composeDone').hidden = true;
   $('#counter').hidden = true;
   $('#placeBtn').disabled = false;
-  show($('#composer'));
-  setTimeout(() => $('#composeText').focus(), 400);
+  $('#composer').hidden = false;
+  setTimeout(() => $('#composeText').focus(), 420);
 }
 
 async function placePetal(e) {
   e.preventDefault();
   const text = $('#composeText').value.trim();
   if (!text) return;
-  const honeypot = $('#composeForm').elements.website.value;
+  const flower = state.flowers.find((f) => f.id === state.composeFlowerId);
+  if (!flower) return;
 
-  // Turn the chosen day into seconds. An empty or future date falls back to now.
   const whenValue = $('#composeWhen').value;
   let spokenAt = whenValue ? Math.floor(new Date(`${whenValue}T00:00:00`).getTime() / 1000) : Math.floor(Date.now() / 1000);
   if (!Number.isFinite(spokenAt)) spokenAt = Math.floor(Date.now() / 1000);
@@ -303,10 +511,16 @@ async function placePetal(e) {
   const btn = $('#placeBtn');
   btn.disabled = true;
 
-  const flower = state.flowers[state.index];
   const { ok, body } = await api(`/api/flowers/${flower.id}/petals`, {
     method: 'POST',
-    body: JSON.stringify({ text, website: honeypot, spokenAt }),
+    body: JSON.stringify({
+      text,
+      website: $('#composeForm').elements.website.value,
+      spokenAt,
+      medium: $('#composeMedium').value || undefined,
+      direction: $('#composeDirection').value || undefined,
+      relationship: $('#composeRelationship').value || undefined,
+    }),
   });
 
   if (!ok) {
@@ -316,97 +530,113 @@ async function placePetal(e) {
     return;
   }
 
-  // "Thank you for that." — then the view closes and the petal blooms.
   $('#composeForm').hidden = true;
   $('#composeDone').hidden = false;
 
   if (body.petal) flower.petals.push(body.petal);
   flower.hasRoom = flower.petals.length < flower.maxPetals;
 
-  setTimeout(() => {
-    hide($('#composer'));
-    render();
-    // Let the freshest petal bloom in.
-    const fresh = $('#flowerHolder').querySelector(`[data-petal-id="${body.petal && body.petal.id}"]`);
+  setTimeout(async () => {
+    $('#composer').hidden = true;
+    // If this flower just filled, let the garden grow a fresh one for the next note.
+    if (!flower.hasRoom) {
+      const res = await api('/api/flowers');
+      if (res.ok && res.body.flowers) setFlowers(res.body.flowers);
+    } else {
+      renderWorld();
+    }
+    focusFlower(flower.id, 1.05);
+    const fresh = $('#world').querySelector(`[data-petal-id="${body.petal && body.petal.id}"]`);
     if (fresh) fresh.classList.add('blooming');
   }, 2000);
 }
 
-// ---------- overlays ----------
-
-function show(el) {
-  el.hidden = false;
-}
-function hide(el) {
-  el.hidden = true;
-  if (el.id === 'reader') {
-    state.openPetalId = null;
-    state.openPetalEl = null;
-  }
-}
+// ---------- overlays + chrome ----------
 
 function wireOverlays() {
   document.querySelectorAll('[data-close]').forEach((b) =>
     b.addEventListener('click', () => {
-      hide($('#reader'));
-      hide($('#composer'));
+      const overlay = b.closest('.overlay');
+      if (overlay) overlay.hidden = true;
     }),
   );
   document.querySelectorAll('.overlay').forEach((ov) =>
     ov.addEventListener('click', (e) => {
-      if (e.target === ov) hide(ov);
+      if (e.target === ov) ov.hidden = true;
     }),
   );
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      hide($('#reader'));
-      hide($('#composer'));
+      $('#reader').hidden = true;
+      $('#composer').hidden = true;
+      $('#about').hidden = true;
     }
-    if (!$('#reader').hidden) return;
-    if (!$('#composer').hidden) return;
-    if (e.key === 'ArrowLeft') goTo(state.index - 1);
-    if (e.key === 'ArrowRight') goTo(state.index + 1);
   });
 
+  $('#aboutBtn').addEventListener('click', openAbout);
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#composeForm').addEventListener('submit', placePetal);
   $('#composeText').addEventListener('input', (e) => {
     const left = 280 - e.target.value.length;
     const counter = $('#counter');
-    if (left <= 40) {
-      counter.hidden = false;
-      counter.textContent = `${left}`;
-    } else {
-      counter.hidden = true;
-    }
+    counter.hidden = left > 40;
+    if (!counter.hidden) counter.textContent = `${left}`;
   });
 
-  $('#navPrev').addEventListener('click', () => goTo(state.index - 1));
-  $('#navNext').addEventListener('click', () => goTo(state.index + 1));
+  // "with whom?" softens to "to" or "from" once a direction is chosen.
+  $('#composeDirection').addEventListener('change', (e) => {
+    const v = e.target.value;
+    $('#whomLabel').textContent = v === 'gave' ? 'to whom?' : v === 'received' ? 'from whom?' : 'with whom?';
+  });
 }
 
-function goTo(i) {
-  const n = state.flowers.length;
-  if (n === 0) return;
-  state.index = (i + n) % n;
-  render();
+// ---------- the garden's weather (community stats) ----------
+
+function plural(n, one, many) {
+  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+}
+
+async function openAbout() {
+  $('#about').hidden = false;
+  const el = $('#stats');
+  el.innerHTML = '<p class="stat">listening to the garden…</p>';
+  const { ok, body } = await api('/api/stats');
+  if (!ok || !body.stats) {
+    el.innerHTML = '<p class="stat">the garden is quiet just now.</p>';
+    return;
+  }
+  const s = body.stats;
+  const lines = [];
+  lines.push(
+    `<p class="stat"><span class="n">${plural(s.petalsAlive, 'note', 'notes')}</span> are open in the garden right now<small>across ${plural(s.flowers, 'flower', 'flowers')}</small></p>`,
+  );
+  if (s.keptAlive > 0) {
+    lines.push(
+      `<p class="stat"><span class="n">${plural(s.keptAlive, 'time', 'times')}</span> a note has been kept alive<small>by hands their authors will never meet</small></p>`,
+    );
+  }
+  if (s.faded > 0) {
+    lines.push(`<p class="stat"><span class="n">${plural(s.faded, 'note has', 'notes have')}</span> quietly faded</p>`);
+  }
+  if (s.oldestSpokenAt) {
+    const year = new Date(s.oldestSpokenAt * 1000).getFullYear();
+    lines.push(`<p class="stat">the oldest words still here were spoken in <span class="n">${year}</span></p>`);
+  }
+  el.innerHTML = lines.join('');
 }
 
 // ---------- onboarding (first visit only) ----------
 
 function runOnboarding() {
   return new Promise((resolve) => {
-    const seen = localStorage.getItem('we_seen_onboarding');
-    if (seen) return resolve();
+    if (localStorage.getItem('we_seen_onboarding')) return resolve();
 
     const overlay = $('#onboarding');
     overlay.hidden = false;
     const lines = [...overlay.querySelectorAll('.line')];
     const begin = $('#begin');
 
-    lines.forEach((line, i) => {
-      setTimeout(() => line.classList.add('show'), 600 + i * 1900);
-    });
+    lines.forEach((line, i) => setTimeout(() => line.classList.add('show'), 600 + i * 1900));
     setTimeout(() => (begin.hidden = false), 600 + lines.length * 1900);
 
     begin.addEventListener('click', () => {
@@ -421,17 +651,37 @@ function runOnboarding() {
   });
 }
 
+function showHint() {
+  const hint = $('#hint');
+  hint.textContent = 'drag to wander · scroll to zoom · touch a flower to leave a note';
+  hint.hidden = false;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 6000);
+}
+
 // ---------- start ----------
 
 async function start() {
+  wireWorld();
   wireOverlays();
   await runOnboarding();
 
   const { ok, body } = await api('/api/flowers');
-  if (ok && body.flowers) state.flowers = body.flowers;
+  if (ok && body.flowers) setFlowers(body.flowers);
 
-  $('#stage').hidden = false;
-  render();
+  $('#viewport').hidden = false;
+  $('#aboutBtn').hidden = false;
+
+  // Arrive gently: start pulled back, then ease in toward the first flower.
+  const first = state.flowers[0];
+  const pos = first ? flowerPosition(0) : { x: 0, y: 0 };
+  view.scale = 0.55;
+  view.x = window.innerWidth / 2 - pos.x * view.scale;
+  view.y = window.innerHeight / 2 - pos.y * view.scale;
+  applyView();
+  focusOn(pos.x, pos.y, 1.0, 1600);
+
+  showHint();
 }
 
 start();

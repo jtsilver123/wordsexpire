@@ -5,8 +5,15 @@ flowers. Each flower holds a few petals. A petal fades with time unless others
 gently touch it, which renews its life. No accounts. No likes, counters, or
 streaks. Just words, and the slow weather of attention.
 
-Each note can also carry the date its words were first said — today by default,
-or reaching back in time.
+The garden is one never-ending field you wander by dragging, and zoom through
+by scrolling — flowers settle outward like seeds in a seed-head, so it can grow
+without end. When every flower is full, the garden quietly grows a new one.
+
+A note can also carry the date its words were first said (today by default, or
+reaching back in time), how they passed (in person, a call, a letter…), whether
+you gave or received them, and with whom (a role: my mother, a friend, …).
+
+Live at **https://wordsexpire.wordsexpire.workers.dev**
 
 ## How it works
 
@@ -54,10 +61,11 @@ Local development needs no Cloudflare account; the database lives on disk under
 
 | Method | Path                          | Purpose                                  |
 | ------ | ----------------------------- | ---------------------------------------- |
-| GET    | `/api/flowers`                | active flowers with petals + aliveness   |
+| GET    | `/api/flowers`                | active flowers with petals + aliveness; grows a fresh flower if all are full |
 | GET    | `/api/flowers/:id`            | one flower                               |
+| GET    | `/api/stats`                  | aggregate garden numbers (never personal) |
 | POST   | `/api/flowers`                | plant a new flower                       |
-| POST   | `/api/flowers/:id/petals`     | leave a petal `{ text, spokenAt? }`      |
+| POST   | `/api/flowers/:id/petals`     | leave a petal `{ text, spokenAt?, medium?, direction?, relationship? }` |
 | POST   | `/api/petals/:id/react`       | keep a petal alive                       |
 | GET    | `/admin/flowers`              | list all (bearer `ADMIN_TOKEN`)          |
 | DELETE | `/admin/petals/:id`           | remove a petal                           |

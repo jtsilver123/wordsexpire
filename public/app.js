@@ -22,6 +22,15 @@ const MEDIUM_PHRASE = {
   email: 'by email', letter: 'in a letter', other: '',
 };
 
+// A few lilypads drift in the water. Hovering one reveals a note from the
+// person who planted the pond, in their own hand. A small thing to find.
+const LILYPADS = [
+  { x: 470, y: -380, r: 124, note: 'i built this after someone i love ran out of time to say things. — the gardener' },
+  { x: -600, y: 200, r: 156, note: 'nothing here lasts unless someone returns to tend it. like everything worth keeping. — the gardener' },
+  { x: 340, y: 560, r: 104, note: 'thank you for wandering this far. i hope you left something here. — the gardener' },
+  { x: -360, y: -560, r: 138, note: 'every petal was someone, once, meaning it. be gentle. — the gardener' },
+];
+
 // Faint, optional prompts to help past the blank page.
 const PROMPTS = [
   'what did you never get to say?',
@@ -376,6 +385,69 @@ function buildFlowerNode(flower, index) {
   return node;
 }
 
+// A flat leaf with a notch, a few veins, sitting on the water.
+function drawLilypadSvg(seed) {
+  const svg = makeEl('svg', { viewBox: '0 0 100 100', role: 'img' });
+  svg.setAttribute('aria-label', 'a lilypad');
+  const defs = makeEl('defs');
+  const grad = makeEl('radialGradient', { id: `lp-${seed}`, cx: '42%', cy: '36%' });
+  grad.appendChild(makeEl('stop', { offset: '0%', 'stop-color': '#a4bb88' }));
+  grad.appendChild(makeEl('stop', { offset: '100%', 'stop-color': '#6f8c5b' }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+  svg.appendChild(
+    makeEl('path', {
+      d: 'M50 50 L61.4 7.5 A44 44 0 1 1 81.1 18.9 Z',
+      fill: `url(#lp-${seed})`,
+      stroke: 'rgba(60,80,50,0.22)',
+      'stroke-width': '1',
+    }),
+  );
+  for (let i = 0; i < 4; i++) {
+    const a = ((30 + i * 30) * Math.PI) / 180;
+    svg.appendChild(
+      makeEl('line', {
+        x1: 50,
+        y1: 50,
+        x2: 50 + Math.cos(a) * 40,
+        y2: 50 + Math.sin(a) * 40,
+        stroke: 'rgba(60,80,50,0.16)',
+        'stroke-width': '1',
+      }),
+    );
+  }
+  return svg;
+}
+
+function buildLilypadNode(lp, idx) {
+  const node = document.createElement('div');
+  node.className = 'lilypad';
+  node.style.left = `${lp.x}px`;
+  node.style.top = `${lp.y}px`;
+  node.style.width = `${lp.r}px`;
+  node.style.height = `${lp.r}px`;
+  node.style.marginLeft = `${-lp.r / 2}px`;
+  node.style.marginTop = `${-lp.r / 2}px`;
+
+  const bob = document.createElement('div');
+  bob.className = 'lilypad-bob';
+  const r = seeded(`lily${idx}`, 3);
+  bob.style.animationDuration = `${9 + r * 5}s`;
+  bob.style.animationDelay = `${-r * 7}s`;
+  const svg = drawLilypadSvg(`lily${idx}`);
+  bob.appendChild(svg);
+  bob.addEventListener('mouseenter', () => showTip(lp.note, svg, true));
+  bob.addEventListener('mouseleave', hideTip);
+  bob.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (moved) return;
+    showTip(lp.note, svg, true);
+    setTimeout(hideTip, 4500);
+  });
+  node.appendChild(bob);
+  return node;
+}
+
 function renderWorld() {
   const world = $('#world');
   world.innerHTML = '';
@@ -386,6 +458,7 @@ function renderWorld() {
     const p = flowerPosition(i);
     flowerNodes.push({ node, wx: p.x, wy: p.y });
   });
+  LILYPADS.forEach((lp, i) => world.appendChild(buildLilypadNode(lp, i)));
 }
 
 // ---------- the cursor wave ----------
@@ -399,7 +472,11 @@ let lastRippleX = -999;
 let lastRippleY = -999;
 
 function applyWave(cx, cy) {
-  const R = 220; // reach of the cursor's wave, in screen pixels
+  // No push within the bloom itself, so hovering or reading a flower leaves it
+  // still; only the ring of water around it is disturbed as the cursor passes.
+  const inner = 130 * view.scale;
+  const band = 150; // width of the disturbed ring, in screen pixels
+  const R = inner + band;
   for (const f of flowerNodes) {
     const sx = view.x + f.wx * view.scale;
     const sy = view.y + f.wy * view.scale;
@@ -408,9 +485,9 @@ function applyWave(cx, cy) {
     const d = Math.hypot(dx, dy);
     let tx = 0;
     let ty = 0;
-    if (d < R && d > 0.01) {
-      const influence = 1 - d / R;
-      const push = influence * influence * 24; // eased, gentle falloff
+    if (d > inner && d < R) {
+      const t = (d - inner) / band; // 0..1 across the ring
+      const push = Math.sin(t * Math.PI) * 18; // peaks mid-ring, zero at both edges
       tx = (dx / d) * push;
       ty = (dy / d) * push;
     }
@@ -689,9 +766,10 @@ function wireWorld() {
 
 // ---------- the hover tooltip ----------
 
-function showTip(text, el) {
+function showTip(text, el, hand) {
   const tip = $('#petalTip');
   tip.textContent = text;
+  tip.classList.toggle('hand', !!hand);
   const r = el.getBoundingClientRect();
   tip.style.left = `${r.left + r.width / 2}px`;
   tip.style.top = `${r.top + r.height / 2}px`;

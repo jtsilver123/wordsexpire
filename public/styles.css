@@ -8,6 +8,7 @@
 
   --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --hand: 'Caveat', 'Segoe Script', cursive;
 
   --slow: 900ms;
   --slower: 1200ms;
@@ -198,8 +199,6 @@ body {
   animation: softIn var(--slower) var(--ease) both;
   transition: transform 760ms var(--ease);
   will-change: transform;
-  /* The frog rides the whole flower, so it never flickers between petals. */
-  cursor: url('/frog.svg') 16 16, pointer;
 }
 
 .flower-bob {
@@ -391,6 +390,10 @@ body {
   width: 100%;
   height: 100%;
   overflow: visible;
+  /* The frog rides the bloom (a circle), not the square corners of the box,
+     so it stays a frog over the flower and a normal cursor over the pond. */
+  border-radius: 50%;
+  cursor: url('/frog.svg') 16 16, pointer;
 }
 
 .petal-label {
@@ -419,6 +422,40 @@ body {
   text-align: center;
   pointer-events: none;
   animation: softIn 280ms var(--ease);
+}
+
+/* The founder's notes, in a hand. */
+.petal-tip.hand {
+  font-family: var(--hand);
+  font-size: 1.55rem;
+  line-height: 1.35;
+  max-width: 16rem;
+  color: #4f463c;
+  background: #fbf6ea;
+  transform: translate(-50%, -118%) rotate(-1.5deg);
+}
+
+/* ---------- lilypads (floating easter eggs) ---------- */
+.lilypad {
+  position: absolute;
+  margin: 0 0 0 0;
+  z-index: 1;
+  animation: softIn var(--slower) var(--ease) both;
+}
+
+.lilypad-bob {
+  width: 100%;
+  height: 100%;
+  animation: bob 11s ease-in-out infinite alternate;
+  will-change: transform;
+  cursor: help;
+}
+
+.lilypad svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 6px 8px rgba(40, 60, 70, 0.16));
 }
 
 .hint {
@@ -641,11 +678,14 @@ body {
   border: none;
   cursor: pointer;
   font-family: var(--sans);
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   letter-spacing: 0.07em;
-  color: var(--muted);
-  padding: 0.3rem 0.5rem;
-  opacity: 0.8;
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  opacity: 0.78;
+  text-decoration: underline;
+  text-decoration-color: rgba(58, 51, 44, 0.25);
+  text-underline-offset: 4px;
   transition: color var(--slow) var(--ease), opacity var(--slow) var(--ease);
   animation: softIn var(--slower) var(--ease);
 }

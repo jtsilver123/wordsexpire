@@ -26,7 +26,7 @@ const MEDIUM_PHRASE = {
 // person who planted the pond, in their own hand. A small thing to find.
 const LILYPADS = [
   { x: 470, y: -380, r: 124, note: 'i only dug this pond. everyone who comes is the gardener now.' },
-  { x: -600, y: 200, r: 156, note: 'i made this after someone i love ran out of time to say things.' },
+  { x: -600, y: 200, r: 156, note: 'i sat with this idea for a long time, after rereading old texts i never answered.' },
   { x: 340, y: 560, r: 104, note: 'thank you for wandering this far. i hope you tend something here.' },
   { x: -360, y: -560, r: 138, note: 'whatever grows here is yours. i just set out the water and the first flowers.' },
 ];

@@ -34,6 +34,12 @@
 
     <button class="corner-link" id="aboutBtn" hidden>the garden</button>
 
+    <!-- Appears when you've wandered past the last flower, pointing the way back. -->
+    <button class="compass" id="compass" hidden aria-label="back to the flowers">
+      <span class="compass-arrow" id="compassArrow">→</span>
+      <span class="compass-label">back to the flowers</span>
+    </button>
+
     <p class="hint" id="hint" hidden></p>
     <p class="signature">a small note will fade unless others keep it alive</p>
 
@@ -58,6 +64,7 @@
         <p class="petal-text" id="petalText"></p>
         <p class="petal-context" id="petalContext" hidden></p>
         <p class="petal-spoken" id="petalSpoken" hidden></p>
+        <p class="petal-life" id="petalLife"></p>
         <div class="keep">
           <button class="drop" id="keepBtn" aria-label="keep alive">
             <span class="drop-glyph"></span>

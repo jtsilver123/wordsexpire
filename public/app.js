@@ -22,6 +22,7 @@ const MEDIUM_PHRASE = {
   email: 'by email', letter: 'in a letter', other: '',
 };
 
+const LIFESPAN_SECONDS = 604800; // 7 days; mirrors the Worker's decay window
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // the angle seeds settle into
 const SPACING = 560; // world distance between successive flowers
@@ -103,6 +104,20 @@ function contextLine(p) {
 function snippet(text) {
   const s = text.trim().replace(/\s+/g, ' ');
   return s.length > 13 ? `${s.slice(0, 13).trimEnd()}…` : s;
+}
+
+// How long a petal has left, and how often it's been renewed.
+function petalLife(p) {
+  const left = Math.max(0, p.aliveness) * LIFESPAN_SECONDS;
+  let when;
+  if (p.aliveness <= 0) when = 'nearly gone — touch to bring it back';
+  else if (left >= 2 * 86400) when = `fades in about ${Math.round(left / 86400)} days`;
+  else if (left >= 86400) when = 'fades in about a day';
+  else if (left >= 2 * 3600) when = `fades in about ${Math.round(left / 3600)} hours`;
+  else when = 'fades within the hour';
+  const n = p.reactionCount || 0;
+  const kept = n > 0 ? `kept alive ${n} ${n === 1 ? 'time' : 'times'}` : null;
+  return kept ? `${kept} · ${when}` : when;
 }
 
 async function api(path, options) {
@@ -197,19 +212,18 @@ function drawFlowerSvg(flower) {
       label.textContent = snippet(petal.text);
       label.style.opacity = petal.isGhost ? '0.18' : String(0.35 + 0.45 * petal.aliveness);
 
-      const open = (e) => {
+      g.appendChild(path);
+      g.appendChild(label);
+      // One handler per petal (on the group), so moving between the shape and
+      // its label doesn't flicker the preview between different petals.
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', (e) => {
         e.stopPropagation();
         if (moved) return;
         openReader(petal, path);
-      };
-      for (const el of [path, label]) {
-        el.addEventListener('click', open);
-        el.addEventListener('mouseenter', () => showTip(petal.text, path));
-        el.addEventListener('mouseleave', hideTip);
-        el.style.cursor = 'pointer';
-      }
-      g.appendChild(path);
-      g.appendChild(label);
+      });
+      g.addEventListener('mouseenter', () => showTip(petal.text, path));
+      g.addEventListener('mouseleave', hideTip);
     } else {
       const path = makeEl('path', {
         d: petalPath(slotSeed),
@@ -221,6 +235,15 @@ function drawFlowerSvg(flower) {
       });
       path.style.opacity = '0.6';
       g.appendChild(path);
+      // An empty slot is also an invitation to leave a note.
+      if (flower.hasRoom) {
+        g.style.cursor = 'pointer';
+        g.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (moved) return;
+          openComposer(flower);
+        });
+      }
     }
     sway.appendChild(g);
   }
@@ -255,13 +278,6 @@ function buildFlowerNode(flower, index) {
   const pos = flowerPosition(index);
   node.style.left = `${pos.x}px`;
   node.style.top = `${pos.y}px`;
-
-  if (flower.theme) {
-    const theme = document.createElement('p');
-    theme.className = 'flower-theme';
-    theme.textContent = flower.theme;
-    node.appendChild(theme);
-  }
   node.appendChild(drawFlowerSvg(flower));
   return node;
 }
@@ -281,6 +297,61 @@ function setFlowers(list) {
 
 function applyView() {
   $('#world').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+  updateCompass();
+}
+
+// The world point currently at the center of the screen.
+function viewCenterWorld() {
+  return {
+    x: (window.innerWidth / 2 - view.x) / view.scale,
+    y: (window.innerHeight / 2 - view.y) / view.scale,
+  };
+}
+
+function nearestFlowerIndex() {
+  const c = viewCenterWorld();
+  let best = -1;
+  let bestDist = Infinity;
+  state.flowers.forEach((_, i) => {
+    const p = flowerPosition(i);
+    const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+let compassTarget = -1;
+
+// When no flower is on screen, point the way back to the nearest one.
+function updateCompass() {
+  const compass = $('#compass');
+  if (!compass) return;
+  if (!state.flowers.length) {
+    compass.hidden = true;
+    return;
+  }
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const margin = 200 * view.scale; // a flower's reach
+  const anyVisible = state.flowers.some((_, i) => {
+    const p = flowerPosition(i);
+    const sx = view.x + p.x * view.scale;
+    const sy = view.y + p.y * view.scale;
+    return sx > -margin && sx < W + margin && sy > -margin && sy < H + margin;
+  });
+  if (anyVisible) {
+    compass.hidden = true;
+    return;
+  }
+  compassTarget = nearestFlowerIndex();
+  const p = flowerPosition(compassTarget);
+  const c = viewCenterWorld();
+  const ang = (Math.atan2(p.y - c.y, p.x - c.x) * 180) / Math.PI;
+  $('#compassArrow').style.transform = `rotate(${ang}deg)`;
+  compass.hidden = false;
 }
 
 function focusOn(worldX, worldY, scale, ms = 900) {
@@ -383,7 +454,16 @@ function wireWorld() {
     'wheel',
     (e) => {
       e.preventDefault();
-      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015));
+      // Pinch (and ctrl/cmd + wheel) zooms toward the cursor; a plain
+      // two-finger scroll simply moves the garden.
+      if (e.ctrlKey) {
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+      } else {
+        tweenToken++;
+        view.x -= e.deltaX;
+        view.y -= e.deltaY;
+        applyView();
+      }
     },
     { passive: false },
   );
@@ -426,6 +506,8 @@ function openReader(petal, pathEl) {
     spoken.hidden = true;
   }
 
+  $('#petalLife').textContent = petalLife(petal);
+
   $('.keep').classList.remove('kept');
   $('#keepLabel').textContent = 'keep alive';
   $('#keepBtn').disabled = false;
@@ -444,6 +526,7 @@ async function keepAlive() {
 
   $('.keep').classList.add('kept');
   $('#keepLabel').textContent = body.alreadyKept ? 'already kept alive' : 'renewed';
+  $('#petalLife').textContent = petalLife(body.petal);
 
   const petal = body.petal;
   const flower = state.flowers.find((f) => f.petals.some((p) => p.id === petal.id));
@@ -574,6 +657,12 @@ function wireOverlays() {
   });
 
   $('#aboutBtn').addEventListener('click', openAbout);
+  $('#compass').addEventListener('click', () => {
+    const i = compassTarget >= 0 ? compassTarget : nearestFlowerIndex();
+    if (i < 0) return;
+    const p = flowerPosition(i);
+    focusOn(p.x, p.y, 1.0);
+  });
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#composeForm').addEventListener('submit', placePetal);
   $('#composeText').addEventListener('input', (e) => {
@@ -653,7 +742,7 @@ function runOnboarding() {
 
 function showHint() {
   const hint = $('#hint');
-  hint.textContent = 'drag to wander · scroll to zoom · touch a flower to leave a note';
+  hint.textContent = 'drag or scroll to wander · pinch to zoom · touch a flower to leave a note';
   hint.hidden = false;
   hint.classList.add('show');
   setTimeout(() => hint.classList.remove('show'), 6000);

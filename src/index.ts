@@ -96,6 +96,7 @@ function shapePetal(p: PetalRow, at: number) {
     medium: p.medium,
     direction: p.direction,
     relationship: p.relationship,
+    reactionCount: p.reaction_count,
     aliveness: a,
     // Once aliveness hits zero a petal lingers faintly through the grace window.
     isGhost: a <= 0,

@@ -1169,10 +1169,12 @@ async function placePetal(e) {
 
   $('#composeForm').hidden = true;
   $('#composeDone').hidden = false;
-  // Offer the author a link back to their own note.
-  if (body.petal) $('#shareNew').onclick = () => shareNote(body.petal.id, $('#shareNew'));
-
-  if (body.petal) flower.petals.push(body.petal);
+  // Offer the author a link back to their own note, and remember it locally.
+  if (body.petal) {
+    $('#shareNew').onclick = () => shareNote(body.petal.id, $('#shareNew'));
+    saveMyNote(body.petal.id);
+    flower.petals.push(body.petal);
+  }
   flower.hasRoom = flower.petals.length < flower.maxPetals;
 
   setTimeout(async () => {
@@ -1215,18 +1217,47 @@ async function shareNote(id, btn) {
   }
 }
 
+// Drift to a particular note by id, then open it.
+function goToPetal(id) {
+  let fi = -1;
+  let petal = null;
+  state.flowers.forEach((f, i) => {
+    const p = f.petals.find((x) => x.id === id);
+    if (p) {
+      fi = i;
+      petal = p;
+    }
+  });
+  if (fi < 0) return false;
+  const pos = flowerPosition(fi);
+  focusOn(pos.x, pos.y, 1.05);
+  setTimeout(() => {
+    const el = $('#world').querySelector(`[data-petal-id="${id}"]`);
+    openReader(petal, el);
+  }, 800);
+  return true;
+}
+
 // Drift to a random living note and open it.
 function wanderToRandom() {
   const all = [];
-  state.flowers.forEach((f, i) => f.petals.forEach((p) => all.push({ fi: i, petal: p })));
+  state.flowers.forEach((f) => f.petals.forEach((p) => all.push(p.id)));
   if (!all.length) return;
-  const pick = all[Math.floor(Math.random() * all.length)];
-  const pos = flowerPosition(pick.fi);
-  focusOn(pos.x, pos.y, 1.05);
-  setTimeout(() => {
-    const el = $('#world').querySelector(`[data-petal-id="${pick.petal.id}"]`);
-    openReader(pick.petal, el);
-  }, 900);
+  goToPetal(all[Math.floor(Math.random() * all.length)]);
+}
+
+// The notes this browser has left, kept locally (no account).
+function getMyNotes() {
+  try {
+    return JSON.parse(localStorage.getItem('we_my_notes') || '[]');
+  } catch {
+    return [];
+  }
+}
+function saveMyNote(id) {
+  const a = getMyNotes().filter((x) => x !== id);
+  a.push(id);
+  localStorage.setItem('we_my_notes', JSON.stringify(a.slice(-100)));
 }
 
 // ---------- overlays + chrome ----------
@@ -1280,8 +1311,47 @@ function plural(n, one, many) {
   return `${n.toLocaleString()} ${n === 1 ? one : many}`;
 }
 
+// The notes this visitor has left, resolved against what's still in the pond.
+function renderMine() {
+  const el = $('#mine');
+  el.textContent = '';
+  const byId = new Map();
+  state.flowers.forEach((f) => f.petals.forEach((p) => byId.set(p.id, p)));
+  const mine = getMyNotes()
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .reverse(); // newest first
+  if (!mine.length) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  const head = document.createElement('p');
+  head.className = 'mine-head';
+  head.textContent = 'the notes you have left';
+  el.appendChild(head);
+  for (const p of mine) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'mine-row';
+    const t = document.createElement('span');
+    t.className = 'mine-text';
+    t.textContent = p.text;
+    const s = document.createElement('span');
+    s.className = 'mine-status';
+    s.textContent = p.expired ? 'faded' : p.aliveness < 0.38 ? 'fading' : '';
+    row.append(t, s);
+    row.addEventListener('click', () => {
+      closeOverlay($('#about'));
+      goToPetal(p.id);
+    });
+    el.appendChild(row);
+  }
+}
+
 async function openAbout() {
   openOverlay($('#about'));
+  renderMine();
   const el = $('#stats');
   el.innerHTML = '<p class="stat">listening to the garden…</p>';
   const { ok, body } = await api('/api/stats');
@@ -1427,6 +1497,35 @@ function setupSound() {
 
 // ---------- start ----------
 
+// ---------- time of day ----------
+// The pond's water drifts with the local clock: night, dawn, day, dusk.
+const WATER_PHASES = [
+  { h: 0, c: ['#c6d1d3', '#aabbc1', '#8ca2aa', '#76909b'] }, // night
+  { h: 6, c: ['#f4ebdc', '#e8e0cf', '#d3d8c8', '#c0cdbe'] }, // dawn
+  { h: 13, c: ['#e9efe4', '#d2e0d4', '#b9cec3', '#a6c0b5'] }, // day
+  { h: 19, c: ['#f2e3cf', '#e2cdbd', '#c7b6ad', '#ad9ea0'] }, // dusk
+  { h: 24, c: ['#c6d1d3', '#aabbc1', '#8ca2aa', '#76909b'] }, // back to night
+];
+function applyWater() {
+  const d = new Date();
+  const h = d.getHours() + d.getMinutes() / 60;
+  let lo = WATER_PHASES[0];
+  let hi = WATER_PHASES[WATER_PHASES.length - 1];
+  for (let i = 0; i < WATER_PHASES.length - 1; i++) {
+    if (h >= WATER_PHASES[i].h && h <= WATER_PHASES[i + 1].h) {
+      lo = WATER_PHASES[i];
+      hi = WATER_PHASES[i + 1];
+      break;
+    }
+  }
+  const span = hi.h - lo.h;
+  const t = span ? (h - lo.h) / span : 0;
+  const root = document.documentElement;
+  for (let i = 0; i < 4; i++) {
+    root.style.setProperty(`--w${i}`, rgbStr(mixRgb(hexToRgb(lo.c[i]), hexToRgb(hi.c[i]), t)));
+  }
+}
+
 // The quieter, secondary controls appear only once the visitor begins.
 let chromeRevealed = false;
 function revealChrome() {
@@ -1436,6 +1535,8 @@ function revealChrome() {
 }
 
 async function start() {
+  applyWater();
+  setInterval(applyWater, 300000); // drift the water every few minutes
   wireWorld();
   wireOverlays();
   await runOnboarding();

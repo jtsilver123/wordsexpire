@@ -6,6 +6,13 @@
   --accent: #b26f5c;
   --hairline: rgba(58, 51, 44, 0.12);
 
+  /* The pond's water, shifted by time of day in app.js (these are the daytime
+     defaults / fallback). */
+  --w0: #e9efe4;
+  --w1: #d2e0d4;
+  --w2: #b9cec3;
+  --w3: #a6c0b5;
+
   --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --hand: 'Caveat', 'Segoe Script', cursive;
@@ -109,7 +116,8 @@ select {
   inset: 0;
   overflow: hidden;
   touch-action: none; /* we handle pan and pinch ourselves */
-  background: radial-gradient(150% 115% at 50% -8%, #e9efe4 0%, #d2e0d4 34%, #b9cec3 70%, #a6c0b5 100%);
+  background: radial-gradient(150% 115% at 50% -8%, var(--w0) 0%, var(--w1) 34%, var(--w2) 70%, var(--w3) 100%);
+  transition: background 4000ms var(--ease);
   animation: fadeIn var(--slower) var(--ease) both;
 }
 
@@ -651,6 +659,59 @@ select {
   letter-spacing: 0.05em;
   color: var(--muted);
   margin-top: 0.1rem;
+}
+
+/* The notes this visitor has left, to return and tend. */
+.mine {
+  margin-bottom: 1.6rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--hairline);
+  text-align: left;
+}
+
+.mine-head {
+  margin: 0 0 0.7rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-align: center;
+}
+
+.mine-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.2rem;
+  text-align: left;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background var(--slow) var(--ease);
+}
+
+.mine-row:hover {
+  background: rgba(58, 51, 44, 0.05);
+}
+
+.mine-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mine-status {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .signature {

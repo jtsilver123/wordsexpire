@@ -34,6 +34,15 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  /* The gardener's watering can, idle everywhere by default. */
+  cursor: url('/cursor-can.svg') 5 11, default;
+}
+
+/* Form fields keep their normal cursors so typing stays usable. */
+textarea,
+input,
+select {
+  cursor: auto;
 }
 
 /* Soft fade used in a few places. */
@@ -100,23 +109,8 @@ body {
   inset: 0;
   overflow: hidden;
   touch-action: none; /* we handle pan and pinch ourselves */
-  /* The gardener's watering can, carried across the whole pond. */
-  cursor: url('/cursor-can.svg') 5 11, default;
   background: radial-gradient(150% 115% at 50% -8%, #e9efe4 0%, #d2e0d4 34%, #b9cec3 70%, #a6c0b5 100%);
   animation: fadeIn var(--slower) var(--ease) both;
-}
-
-/* Over anything you can tend, the can tips to pour. */
-.flower svg,
-.cta,
-.wander,
-.logo,
-.corner-link,
-.compass,
-.sound-toggle,
-.drop,
-.text-link {
-  cursor: url('/cursor-can-pour.svg') 5 11, pointer;
 }
 
 /* Slow drifting light on the water, so the surface is never quite still. */
@@ -742,7 +736,6 @@ body {
 
 /* ---------- flower internals ---------- */
 .petal {
-  cursor: pointer;
   transition: transform var(--slow) var(--ease), opacity var(--slow) var(--ease),
     filter var(--slow) var(--ease);
   transform-box: fill-box;
@@ -751,10 +744,6 @@ body {
 
 .petal:hover {
   filter: brightness(1.04);
-}
-
-.petal.empty {
-  cursor: default;
 }
 
 .petal.blooming {
@@ -1528,4 +1517,20 @@ textarea:focus {
   .about-reflection {
     font-size: 1.18rem;
   }
+}
+
+/* The pouring can, on everything you can tend. Placed last so it wins over
+   each control's own cursor declaration. (Custom SVG cursors are ignored by
+   some browsers, which fall back to the pointer.) */
+.petal,
+.heart,
+.drop,
+.cta,
+.wander,
+.logo,
+.corner-link,
+.compass,
+.sound-toggle,
+.text-link {
+  cursor: url('/cursor-can-pour.svg') 5 11, pointer;
 }

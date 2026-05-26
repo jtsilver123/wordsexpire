@@ -25,10 +25,10 @@ const MEDIUM_PHRASE = {
 // A few lilypads drift in the water. Hovering one reveals a note from the
 // person who planted the pond, in their own hand. A small thing to find.
 const LILYPADS = [
-  { x: 470, y: -380, r: 124, note: 'i built this after someone i love ran out of time to say things. — the gardener' },
-  { x: -600, y: 200, r: 156, note: 'nothing here lasts unless someone returns to tend it. like everything worth keeping. — the gardener' },
-  { x: 340, y: 560, r: 104, note: 'thank you for wandering this far. i hope you left something here. — the gardener' },
-  { x: -360, y: -560, r: 138, note: 'every petal was someone, once, meaning it. be gentle. — the gardener' },
+  { x: 470, y: -380, r: 124, note: 'i only dug this pond. everyone who comes is the gardener now.' },
+  { x: -600, y: 200, r: 156, note: 'i made this after someone i love ran out of time to say things.' },
+  { x: 340, y: 560, r: 104, note: 'thank you for wandering this far. i hope you tend something here.' },
+  { x: -360, y: -560, r: 138, note: 'whatever grows here is yours. i just set out the water and the first flowers.' },
 ];
 
 // Faint, optional prompts to help past the blank page.
@@ -62,6 +62,7 @@ const view = { x: 0, y: 0, scale: 1 };
 let tweenToken = 0;
 let moved = false; // did the last gesture drag, rather than tap?
 let flowerNodes = []; // { node, wx, wy } for the cursor-wave displacement
+let koiSwimEls = []; // koi fish elements, for the ripples they leave
 
 // ---------- tiny helpers ----------
 
@@ -456,9 +457,64 @@ function buildLilypadNode(lp, idx) {
   return node;
 }
 
+// A simple koi, seen from above, pointing right.
+function drawKoiSvg(scale) {
+  const svg = makeEl('svg', { viewBox: '0 0 64 32', role: 'img' });
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('width', String(64 * scale));
+  svg.setAttribute('height', String(32 * scale));
+  svg.appendChild(makeEl('path', { d: 'M14 16 L2 6 Q7 16 2 26 Z', fill: '#e3a06a' }));
+  svg.appendChild(makeEl('ellipse', { cx: 38, cy: 16, rx: 24, ry: 9, fill: '#eaad73' }));
+  svg.appendChild(makeEl('ellipse', { cx: 46, cy: 14, rx: 8, ry: 4.5, fill: '#f5ecdd' }));
+  svg.appendChild(makeEl('circle', { cx: 30, cy: 17, r: 4.5, fill: '#d57f47' }));
+  svg.appendChild(makeEl('path', { d: 'M34 8 Q40 2 44 8 Z', fill: '#e3a06a' }));
+  return svg;
+}
+
+// A few koi glide beneath the surface, leaving ripples as they go.
+function setupKoi() {
+  if (reduceMotion) return;
+  const world = $('#world');
+  const koi = [
+    { x: 220, y: 300, dur: 36, scale: 1, delay: -5 },
+    { x: -420, y: -180, dur: 49, scale: 1.3, delay: -22 },
+    { x: 520, y: -360, dur: 42, scale: 0.85, delay: -34 },
+  ];
+  koiSwimEls = [];
+  for (const k of koi) {
+    const node = document.createElement('div');
+    node.className = 'koi';
+    node.style.left = `${k.x}px`;
+    node.style.top = `${k.y}px`;
+    const swim = document.createElement('div');
+    swim.className = 'koi-swim';
+    swim.style.animationDuration = `${k.dur}s`;
+    swim.style.animationDelay = `${k.delay}s`;
+    swim.appendChild(drawKoiSvg(k.scale));
+    node.appendChild(swim);
+    world.appendChild(node);
+    koiSwimEls.push(swim);
+  }
+}
+
+// The koi stir the water as they pass.
+function koiRipples() {
+  if (!reduceMotion && !$('#viewport').hidden && koiSwimEls.length) {
+    const el = koiSwimEls[Math.floor(Math.random() * koiSwimEls.length)];
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width * 0.7;
+    const cy = r.top + r.height / 2;
+    if (cx > 0 && cx < window.innerWidth && cy > 0 && cy < window.innerHeight) {
+      makeRipple(cx, cy, Math.random() < 0.4);
+    }
+  }
+  setTimeout(koiRipples, 1600 + Math.random() * 2200);
+}
+
 function renderWorld() {
   const world = $('#world');
-  world.innerHTML = '';
+  // Remove only flowers and lilypads; the koi keep swimming across re-renders.
+  world.querySelectorAll('.flower, .lilypad').forEach((n) => n.remove());
   flowerNodes = [];
   state.flowers.forEach((flower, i) => {
     const node = buildFlowerNode(flower, i);
@@ -544,7 +600,7 @@ function ambientRipple() {
   if (!reduceMotion && !$('#viewport').hidden) {
     makeRipple(Math.random() * window.innerWidth, Math.random() * window.innerHeight, true);
   }
-  setTimeout(ambientRipple, 4000 + Math.random() * 4000);
+  setTimeout(ambientRipple, 2600 + Math.random() * 3200);
 }
 
 function setFlowers(list) {
@@ -1586,6 +1642,7 @@ async function start() {
 
   const { ok, body } = await api('/api/flowers');
   if (ok && body.flowers) setFlowers(body.flowers);
+  setupKoi();
 
   // On arrival, show only the pond and the one invitation. The rest of the
   // chrome fades in once the visitor first reaches into the garden.
@@ -1610,6 +1667,7 @@ async function start() {
 
   showHint();
   ambientRipple();
+  koiRipples();
 }
 
 // If the URL points at one note (/p/:id) or flower (/f/:id), go there.

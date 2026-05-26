@@ -208,9 +208,47 @@ select {
   width: 400px;
   height: 400px;
   margin: -200px 0 0 -200px;
+  z-index: 2; /* above the koi and lilypads */
   animation: softIn var(--slower) var(--ease) both;
   transition: transform 760ms var(--ease);
   will-change: transform;
+}
+
+/* Koi gliding beneath the surface. */
+.koi {
+  position: absolute;
+  z-index: 0;
+  opacity: 0.5;
+  filter: blur(0.6px);
+  pointer-events: none;
+}
+
+.koi-swim {
+  animation: koiSwim 40s linear infinite;
+  will-change: transform;
+}
+
+.koi svg {
+  display: block;
+  margin: -16px 0 0 -32px;
+}
+
+@keyframes koiSwim {
+  0% {
+    transform: translate(0, -220px) rotate(36deg);
+  }
+  25% {
+    transform: translate(300px, 0) rotate(144deg);
+  }
+  50% {
+    transform: translate(0, 220px) rotate(216deg);
+  }
+  75% {
+    transform: translate(-300px, 0) rotate(324deg);
+  }
+  100% {
+    transform: translate(0, -220px) rotate(396deg);
+  }
 }
 
 .flower-bob {

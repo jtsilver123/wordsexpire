@@ -515,7 +515,8 @@ function koiRipples() {
 function setupFireflies() {
   if (reduceMotion) return;
   const layer = $('#fireflies');
-  for (let i = 0; i < 14; i++) {
+  const n = window.innerWidth < 560 ? 8 : 14; // fewer on phones
+  for (let i = 0; i < n; i++) {
     const f = document.createElement('div');
     f.className = 'firefly';
     f.style.left = `${Math.random() * 100}vw`;
@@ -1451,6 +1452,7 @@ function welcomeBack() {
   }
   if (!target) return;
 
+  $('#hint').classList.remove('show'); // don't crowd the top with the hint
   $('#welcomeText').textContent = text;
   $('#welcomeSnippet').textContent = `“${target.text.length > 70 ? `${target.text.slice(0, 70)}…` : target.text}”`;
   $('#welcomeGo').onclick = () => {

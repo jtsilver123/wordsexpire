@@ -267,7 +267,7 @@ function drawFlowerSvg(flower) {
       g.appendChild(label);
       // One handler per petal (on the group), so moving between the shape and
       // its label doesn't flicker the preview between different petals.
-      g.style.cursor = 'pointer';
+      g.classList.add('bloom-hit');
       g.addEventListener('click', (e) => {
         e.stopPropagation();
         if (moved) return;
@@ -288,7 +288,7 @@ function drawFlowerSvg(flower) {
       g.appendChild(path);
       // An empty slot is also an invitation to leave a note.
       if (flower.hasRoom) {
-        g.style.cursor = 'pointer';
+        g.classList.add('bloom-hit');
         g.addEventListener('click', (e) => {
           e.stopPropagation();
           if (moved) return;
@@ -327,7 +327,7 @@ function drawFlowerSvg(flower) {
       }),
     );
   }
-  heart.style.cursor = 'pointer';
+  heart.classList.add('bloom-hit');
   heart.addEventListener('click', (e) => {
     e.stopPropagation();
     if (moved) return;
@@ -388,7 +388,7 @@ let lastRippleX = -999;
 let lastRippleY = -999;
 
 function applyWave(cx, cy) {
-  const R = 240; // reach of the cursor's wave, in screen pixels
+  const R = 220; // reach of the cursor's wave, in screen pixels
   for (const f of flowerNodes) {
     const sx = view.x + f.wx * view.scale;
     const sy = view.y + f.wy * view.scale;
@@ -399,7 +399,7 @@ function applyWave(cx, cy) {
     let ty = 0;
     if (d < R && d > 0.01) {
       const influence = 1 - d / R;
-      const push = influence * influence * 36; // eased falloff
+      const push = influence * influence * 24; // eased, gentle falloff
       tx = (dx / d) * push;
       ty = (dy / d) * push;
     }
@@ -437,18 +437,18 @@ function makeRipple(x, y, big) {
 }
 
 function cursorRipple(x, y) {
-  if (Math.hypot(x - lastRippleX, y - lastRippleY) < 20) return;
+  if (Math.hypot(x - lastRippleX, y - lastRippleY) < 34) return;
   lastRippleX = x;
   lastRippleY = y;
   makeRipple(x, y, false);
 }
 
-// The pond stirs on its own: larger, slower ripples surface at random.
+// The pond stirs on its own, slowly: a larger, soft ripple now and then.
 function ambientRipple() {
   if (!reduceMotion && !$('#viewport').hidden) {
     makeRipple(Math.random() * window.innerWidth, Math.random() * window.innerHeight, true);
   }
-  setTimeout(ambientRipple, 1300 + Math.random() * 1700);
+  setTimeout(ambientRipple, 4000 + Math.random() * 4000);
 }
 
 function setFlowers(list) {

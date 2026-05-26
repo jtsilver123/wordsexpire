@@ -117,25 +117,25 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(42% 30% at 26% 32%, rgba(255, 255, 255, 0.3), transparent 60%),
-    radial-gradient(36% 26% at 74% 60%, rgba(255, 250, 234, 0.22), transparent 60%),
-    radial-gradient(32% 24% at 52% 84%, rgba(244, 227, 196, 0.24), transparent 62%);
-  animation: caustics 22s ease-in-out infinite alternate;
+    radial-gradient(42% 30% at 26% 32%, rgba(255, 255, 255, 0.2), transparent 60%),
+    radial-gradient(36% 26% at 74% 60%, rgba(255, 250, 234, 0.15), transparent 60%),
+    radial-gradient(32% 24% at 52% 84%, rgba(244, 227, 196, 0.16), transparent 62%);
+  animation: caustics 40s ease-in-out infinite alternate;
 }
 
 .viewport::after {
-  animation-duration: 31s;
+  animation-duration: 52s;
   animation-direction: alternate-reverse;
-  opacity: 0.8;
+  opacity: 0.7;
   filter: blur(4px);
 }
 
 @keyframes caustics {
   0% {
-    transform: translate(-4.5%, -2.5%) scale(1);
+    transform: translate(-2.5%, -1.5%) scale(1);
   }
   100% {
-    transform: translate(4.5%, 5%) scale(1.09);
+    transform: translate(2.5%, 3%) scale(1.05);
   }
 }
 
@@ -154,27 +154,27 @@ body {
   height: 18px;
   margin: -9px 0 0 -9px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 1px rgba(64, 90, 98, 0.18), inset 0 0 7px rgba(255, 255, 255, 0.45);
-  animation: rippleOut 1400ms ease-out forwards;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
+  animation: rippleOut 1700ms ease-out forwards;
 }
 
-/* The larger, slower ambient ripples that keep the pond alive on its own. */
+/* The larger, slower ambient ripples that keep the pond just barely alive. */
 .ripple-big {
-  width: 36px;
-  height: 36px;
-  margin: -18px 0 0 -18px;
-  border-color: rgba(255, 255, 255, 0.62);
-  animation-duration: 2600ms;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-color: rgba(255, 255, 255, 0.34);
+  animation-duration: 4200ms;
 }
 
 @keyframes rippleOut {
   0% {
     transform: scale(0.3);
-    opacity: 0.85;
+    opacity: 0.5;
   }
   100% {
-    transform: scale(6.5);
+    transform: scale(5);
     opacity: 0;
   }
 }
@@ -205,17 +205,22 @@ body {
   height: 100%;
   position: relative;
   z-index: 1;
-  animation: bob 7s ease-in-out infinite alternate;
+  animation: bob 9s ease-in-out infinite alternate;
   will-change: transform;
 }
 
 @keyframes bob {
   from {
-    transform: translate(-3px, -8px);
+    transform: translate(-2px, -6px);
   }
   to {
-    transform: translate(3px, 9px);
+    transform: translate(2px, 7px);
   }
+}
+
+/* A frog keeps you company over the flowers. */
+.bloom-hit {
+  cursor: url('/frog.svg') 16 16, pointer;
 }
 
 /* The soft mark a floating flower leaves on the water beneath it. */

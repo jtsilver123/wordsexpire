@@ -978,21 +978,43 @@ function ago(sec) {
   return `${Math.floor(d / 86400)}d ago`;
 }
 
+// Quietly flag a note or reply for the keeper to review.
+async function reportTarget(type, id, btn) {
+  const prev = btn.textContent;
+  btn.disabled = true;
+  await api('/api/report', { method: 'POST', body: JSON.stringify({ type, id }) }).catch(() => {});
+  btn.textContent = 'thank you';
+  setTimeout(() => {
+    btn.textContent = prev;
+    btn.disabled = false;
+  }, 2600);
+}
+
+function commentEl(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'comment';
+  const t = document.createElement('p');
+  t.className = 'comment-text';
+  t.textContent = c.text;
+  const foot = document.createElement('div');
+  foot.className = 'comment-foot';
+  const m = document.createElement('span');
+  m.className = 'comment-time';
+  m.textContent = c.createdAt ? ago(c.createdAt) : 'just now';
+  const rep = document.createElement('button');
+  rep.type = 'button';
+  rep.className = 'text-link comment-report';
+  rep.textContent = 'report';
+  rep.addEventListener('click', () => reportTarget('comment', c.id, rep));
+  foot.append(m, rep);
+  wrap.append(t, foot);
+  return wrap;
+}
+
 function renderComments(list) {
   const el = $('#comments');
   el.textContent = '';
-  for (const c of list) {
-    const wrap = document.createElement('div');
-    wrap.className = 'comment';
-    const t = document.createElement('p');
-    t.className = 'comment-text';
-    t.textContent = c.text;
-    const m = document.createElement('span');
-    m.className = 'comment-time';
-    m.textContent = ago(c.createdAt);
-    wrap.append(t, m);
-    el.appendChild(wrap);
-  }
+  for (const c of list) el.appendChild(commentEl(c));
 }
 
 function setRepliesSummary(n) {
@@ -1027,16 +1049,7 @@ async function submitComment(e) {
   $('#commentText').value = '';
   if (body.comment) {
     const el = $('#comments');
-    const wrap = document.createElement('div');
-    wrap.className = 'comment';
-    const t = document.createElement('p');
-    t.className = 'comment-text';
-    t.textContent = body.comment.text;
-    const m = document.createElement('span');
-    m.className = 'comment-time';
-    m.textContent = 'just now';
-    wrap.append(t, m);
-    el.appendChild(wrap);
+    el.appendChild(commentEl(body.comment));
     el.scrollTop = el.scrollHeight;
     setRepliesSummary(el.childElementCount);
   }
@@ -1496,6 +1509,9 @@ function wireOverlays() {
   $('#wanderBtn').addEventListener('click', wanderToRandom);
   $('#shareBtn').addEventListener('click', () => {
     if (state.openPetalId) shareNote(state.openPetalId, $('#shareBtn'));
+  });
+  $('#reportBtn').addEventListener('click', () => {
+    if (state.openPetalId) reportTarget('petal', state.openPetalId, $('#reportBtn'));
   });
   $('#compass').addEventListener('click', () => {
     const i = compassTarget >= 0 ? compassTarget : nearestFlowerIndex();

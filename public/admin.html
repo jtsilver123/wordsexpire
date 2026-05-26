@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>WordsExpire · review</title>
+    <style>
+      :root {
+        --bg: #f5efe6;
+        --surface: #fbf7f1;
+        --text: #3a332c;
+        --muted: #8c8278;
+        --accent: #b26f5c;
+        --line: rgba(58, 51, 44, 0.14);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 15px;
+        padding: 2rem 1rem 4rem;
+      }
+      .wrap { max-width: 40rem; margin: 0 auto; }
+      h1 { font-weight: 500; font-size: 1.3rem; letter-spacing: 0.04em; }
+      .bar { display: flex; gap: 0.6rem; margin: 1rem 0 1.6rem; }
+      input {
+        flex: 1; padding: 0.6rem 0.8rem; border: 1px solid var(--line);
+        border-radius: 10px; background: var(--surface); color: var(--text); font-size: 1rem;
+      }
+      button {
+        border: 1px solid var(--line); background: var(--surface); color: var(--text);
+        border-radius: 10px; padding: 0.45rem 0.8rem; cursor: pointer; font-size: 0.85rem;
+      }
+      button:hover { border-color: var(--accent); color: var(--accent); }
+      .item {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+        padding: 1rem 1.1rem; margin-bottom: 0.9rem;
+      }
+      .meta { font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
+      .meta .flag { color: var(--accent); }
+      .meta .removed { color: #a23; }
+      .text { font-family: Georgia, serif; font-size: 1.1rem; line-height: 1.5; margin-bottom: 0.8rem; }
+      .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+      .note { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>review</h1>
+      <div class="bar">
+        <input id="token" type="password" placeholder="admin token" autocomplete="off" />
+        <button id="load">load</button>
+      </div>
+      <div id="out" class="note">enter the token and load the flagged notes.</div>
+    </div>
+    <script>
+      const $ = (s) => document.querySelector(s);
+      const hdr = () => ({ Authorization: 'Bearer ' + $('#token').value });
+
+      async function act(method, path) {
+        const r = await fetch(path, { method, headers: hdr() });
+        if (r.ok) load();
+      }
+
+      async function load() {
+        const out = $('#out');
+        out.textContent = 'loading…';
+        let res;
+        try {
+          res = await fetch('/admin/reports', { headers: hdr() });
+        } catch {
+          out.textContent = 'network error.';
+          return;
+        }
+        if (!res.ok) {
+          out.textContent = res.status === 401 ? 'not authorized.' : 'error ' + res.status;
+          return;
+        }
+        const { reports } = await res.json();
+        out.innerHTML = '';
+        if (!reports.length) {
+          out.textContent = 'nothing flagged. the garden is quiet.';
+          return;
+        }
+        for (const it of reports) {
+          const card = document.createElement('div');
+          card.className = 'item';
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.innerHTML =
+            it.type +
+            ' · <span class="flag">' +
+            it.count +
+            (it.count === 1 ? ' flag' : ' flags') +
+            '</span>' +
+            (it.removed ? ' · <span class="removed">removed</span>' : '');
+          const text = document.createElement('div');
+          text.className = 'text';
+          text.textContent = it.text;
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+
+          const base = it.type === 'comment' ? '/admin/comments/' : '/admin/petals/';
+          if (it.removed) {
+            const restore = document.createElement('button');
+            restore.textContent = 'restore';
+            restore.onclick = () => act('POST', '/admin/restore/' + it.type + '/' + it.id);
+            actions.appendChild(restore);
+          } else {
+            const remove = document.createElement('button');
+            remove.textContent = 'remove';
+            remove.onclick = () => act('DELETE', base + it.id);
+            actions.appendChild(remove);
+          }
+          const dismiss = document.createElement('button');
+          dismiss.textContent = 'dismiss flags';
+          dismiss.onclick = () => act('DELETE', '/admin/reports/' + it.type + '/' + it.id);
+          actions.appendChild(dismiss);
+
+          card.append(meta, text, actions);
+          out.appendChild(card);
+        }
+      }
+
+      $('#load').addEventListener('click', load);
+      $('#token').addEventListener('keydown', (e) => e.key === 'Enter' && load());
+    </script>
+  </body>
+</html>

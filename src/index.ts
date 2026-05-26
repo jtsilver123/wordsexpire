@@ -21,6 +21,7 @@ const REACTIONS_PER_HOUR = 30;
 const FLOWERS_PER_HOUR = 3;
 const UPLOADS_PER_HOUR = 12;
 const COMMENTS_PER_HOUR = 12;
+const REPORTS_PER_HOUR = 20;
 const MAX_COMMENT = 280;
 const HOUR = 3600;
 const DAY = 86400;
@@ -464,6 +465,33 @@ app.post('/api/petals/:id/comments', async (c) => {
   return c.json({ comment: { id, text, createdAt: at } }, 201);
 });
 
+// A quiet flag on a note or reply, for the keeper to review.
+app.post('/api/report', async (c) => {
+  const at = now();
+  const ipHash = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
+  const body = await c.req
+    .json<{ type?: string; id?: string }>()
+    .catch(() => ({}) as { type?: string; id?: string });
+  const type = body.type === 'comment' ? 'comment' : body.type === 'petal' ? 'petal' : null;
+  const id = typeof body.id === 'string' ? body.id : '';
+  if (!type || !id) return c.json({ message: 'Nothing to flag.' }, 400);
+
+  if (await rateExceeded(c.env.DB, ipHash, 'report', REPORTS_PER_HOUR, HOUR, at)) {
+    return c.json({ message: 'Thank you. We will look.' }, 200);
+  }
+  // One flag per person per target.
+  const seen = await c.env.DB.prepare('SELECT id FROM reports WHERE target_type = ? AND target_id = ? AND ip_hash = ?')
+    .bind(type, id, ipHash)
+    .first();
+  if (!seen) {
+    await c.env.DB.prepare('INSERT INTO reports (id, target_type, target_id, ip_hash, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(uuid(), type, id, ipHash, at)
+      .run();
+    await logRate(c.env.DB, ipHash, 'report', at);
+  }
+  return c.json({ message: 'Thank you. We will look.' }, 200);
+});
+
 // --- admin (bearer token) ----------------------------------------------------
 
 app.use('/admin/*', async (c, next) => {
@@ -491,6 +519,46 @@ app.delete('/admin/petals/:id', async (c) => {
 
 app.delete('/admin/comments/:id', async (c) => {
   await c.env.DB.prepare('UPDATE comments SET deleted_at = ? WHERE id = ?').bind(now(), c.req.param('id')).run();
+  return c.json({ ok: true });
+});
+
+// The review queue: flagged notes and replies, with their words and counts.
+app.get('/admin/reports', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT target_type, target_id, COUNT(*) AS count, MAX(created_at) AS last ' +
+      'FROM reports GROUP BY target_type, target_id ORDER BY last DESC LIMIT 200',
+  ).all<{ target_type: string; target_id: string; count: number; last: number }>();
+
+  const items = [];
+  for (const r of results ?? []) {
+    const table = r.target_type === 'comment' ? 'comments' : 'petals';
+    const row = await c.env.DB.prepare(`SELECT text, deleted_at FROM ${table} WHERE id = ?`)
+      .bind(r.target_id)
+      .first<{ text: string; deleted_at: number | null }>();
+    items.push({
+      type: r.target_type,
+      id: r.target_id,
+      count: r.count,
+      lastReportedAt: r.last,
+      text: row ? row.text : '(gone)',
+      removed: row ? row.deleted_at != null : true,
+    });
+  }
+  return c.json({ reports: items });
+});
+
+// Clear the flags on a target (reviewed, keeping it).
+app.delete('/admin/reports/:type/:id', async (c) => {
+  await c.env.DB.prepare('DELETE FROM reports WHERE target_type = ? AND target_id = ?')
+    .bind(c.req.param('type'), c.req.param('id'))
+    .run();
+  return c.json({ ok: true });
+});
+
+// Restore a wrongly-removed note or reply.
+app.post('/admin/restore/:type/:id', async (c) => {
+  const table = c.req.param('type') === 'comment' ? 'comments' : 'petals';
+  await c.env.DB.prepare(`UPDATE ${table} SET deleted_at = NULL WHERE id = ?`).bind(c.req.param('id')).run();
   return c.json({ ok: true });
 });
 

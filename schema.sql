@@ -44,6 +44,16 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 CREATE INDEX IF NOT EXISTS idx_comments_petal ON comments(petal_id, created_at);
 
+-- Quiet community flags on a note or reply, for the keeper to review.
+CREATE TABLE IF NOT EXISTS reports (
+  id          TEXT PRIMARY KEY,
+  target_type TEXT NOT NULL,   -- 'petal' | 'comment'
+  target_id   TEXT NOT NULL,
+  ip_hash     TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
+
 -- Optional images live in R2 (bucket binding IMAGES); petals.image_id holds the key.
 
 -- A light footprint for rate limiting, keyed by a salted hash of the IP.

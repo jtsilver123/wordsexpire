@@ -626,30 +626,44 @@ app.get('/admin/overview', async (c) => {
        FROM petals ORDER BY created_at DESC LIMIT 1000`,
     )
     .all<PetalRow & { deleted_at: number | null; comment_count: number; report_count: number }>();
+
+  // Every reply, grouped under its note, so the keeper can read and remove any
+  // of them, not only the flagged ones. Removed replies are kept so they can be restored.
+  const allComments =
+    (
+      await db
+        .prepare(
+          `SELECT c.id, c.petal_id, c.text, c.created_at, c.deleted_at,
+             (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'comment' AND r.target_id = c.id) AS report_count
+           FROM comments c ORDER BY c.created_at ASC LIMIT 4000`,
+        )
+        .all<{ id: string; petal_id: string; text: string; created_at: number; deleted_at: number | null; report_count: number }>()
+    ).results ?? [];
+  const repliesByPetal = new Map<string, { id: string; text: string; createdAt: number; removed: boolean; reportCount: number }[]>();
+  for (const cm of allComments) {
+    const arr = repliesByPetal.get(cm.petal_id) ?? [];
+    arr.push({ id: cm.id, text: cm.text, createdAt: cm.created_at, removed: cm.deleted_at != null, reportCount: cm.report_count });
+    repliesByPetal.set(cm.petal_id, arr);
+  }
+
   const notes = (results ?? []).map((p) => ({
     ...shapePetal(p, at),
     removed: p.deleted_at != null,
     commentCount: p.comment_count,
     reportCount: p.report_count,
+    comments: repliesByPetal.get(p.id) ?? [],
   }));
 
-  const rc = await db
-    .prepare(
-      `SELECT c.id, c.text, c.created_at, c.deleted_at, c.petal_id,
-         (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'comment' AND r.target_id = c.id) AS report_count
-       FROM comments c
-       WHERE c.id IN (SELECT target_id FROM reports WHERE target_type = 'comment')
-       ORDER BY c.created_at DESC LIMIT 200`,
-    )
-    .all<{ id: string; text: string; created_at: number; deleted_at: number | null; petal_id: string; report_count: number }>();
-  const reportedComments = (rc.results ?? []).map((r) => ({
-    id: r.id,
-    text: r.text,
-    createdAt: r.created_at,
-    removed: r.deleted_at != null,
-    petalId: r.petal_id,
-    reportCount: r.report_count,
-  }));
+  const reportedComments = allComments
+    .filter((c) => c.report_count > 0)
+    .map((r) => ({
+      id: r.id,
+      text: r.text,
+      createdAt: r.created_at,
+      removed: r.deleted_at != null,
+      petalId: r.petal_id,
+      reportCount: r.report_count,
+    }));
 
   return c.json({ stats: { ...stats, oldestSpokenAt: oldest }, notes, reportedComments });
 });

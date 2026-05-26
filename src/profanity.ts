@@ -1,5 +1,5 @@
-// A deliberately small filter. The goal is to block the clearly hateful —
-// the most obvious slurs — not to police nuance, tone, or feeling.
+// A deliberately small filter. The goal is to block the clearly hateful,
+// the most obvious slurs, not to police nuance, tone, or feeling.
 // Intimate words are messy; we let almost everything through.
 
 const BLOCKED = [

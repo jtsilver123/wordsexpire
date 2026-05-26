@@ -1,10 +1,17 @@
 {
-  // WordsExpire — a single Worker that serves the static garden and the API.
+  // WordsExpire, a single Worker that serves the static garden and the API.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wordsexpire",
   "main": "src/index.ts",
   "compatibility_date": "2025-04-01",
   "account_id": "10b43838f31b9959c8eb61aafdd200f3",
+
+  // The custom domain. Cloudflare provisions the DNS record and certificate
+  // automatically, since wordsexpire.com is a zone in this account.
+  "routes": [
+    { "pattern": "wordsexpire.com", "custom_domain": true },
+    { "pattern": "www.wordsexpire.com", "custom_domain": true }
+  ],
 
   // The frontend lives in /public and is served directly by the assets runtime.
   // Requests that don't match a file fall through to the Worker (the API).

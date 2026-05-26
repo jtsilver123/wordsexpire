@@ -1,4 +1,4 @@
-// WordsExpire — a never-ending garden you can wander and zoom through.
+// WordsExpire, a never-ending garden you can wander and zoom through.
 // No framework, no build step. Just gentle DOM and a little arithmetic.
 
 const COLORS = {
@@ -91,7 +91,7 @@ function todayInputValue() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// "said to my father · in person", and so on — only from what was offered.
+// "said to my father · in person", and so on, only from what was offered.
 function contextLine(p) {
   const parts = [];
   const rel = RELATIONSHIP_LABEL[p.relationship];
@@ -112,7 +112,7 @@ function snippet(text) {
 function petalLife(p) {
   const left = Math.max(0, p.aliveness) * LIFESPAN_SECONDS;
   let when;
-  if (p.aliveness <= 0) when = 'nearly gone — touch to bring it back';
+  if (p.aliveness <= 0) when = 'nearly gone, touch to bring it back';
   else if (left >= 2 * 86400) when = `fades in about ${Math.round(left / 86400)} days`;
   else if (left >= 86400) when = 'fades in about a day';
   else if (left >= 2 * 3600) when = `fades in about ${Math.round(left / 3600)} hours`;
@@ -250,7 +250,7 @@ function drawFlowerSvg(flower) {
     sway.appendChild(g);
   }
 
-  // The heart of the flower — touch it to leave a note.
+  // The heart of the flower, touch it to leave a note.
   const heart = makeEl('g', { class: 'heart' + (flower.hasRoom ? ' has-room' : '') });
   const core = makeEl('circle', {
     class: 'heart-core',
@@ -419,7 +419,7 @@ function wireWorld() {
       const [a, b] = [...pointers.values()];
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
     }
-    // Note: no pointer capture — it would retarget the synthesized click away
+    // Note: no pointer capture, it would retarget the synthesized click away
     // from a petal, breaking tap-to-read. Events bubble to the viewport anyway.
   });
 
@@ -566,7 +566,7 @@ async function keepAlive(e) {
     state.openPetalEl.style.opacity = String(0.4 + 0.6 * petal.aliveness);
   }
 
-  // The petal updated in place above, so just close — no full-garden rebuild.
+  // The petal updated in place above, so just close, no full-garden rebuild.
   setTimeout(() => closeOverlay($('#reader')), 1100);
 }
 
@@ -589,7 +589,7 @@ async function openComposer(flower) {
   if (!target || !target.hasRoom) {
     target = state.flowers.find((f) => f.hasRoom);
     if (!target) {
-      // All full — let the garden grow a fresh one, then go to it.
+      // All full, let the garden grow a fresh one, then go to it.
       const { ok, body } = await api('/api/flowers');
       if (ok && body.flowers) setFlowers(body.flowers);
       target = state.flowers.find((f) => f.hasRoom);

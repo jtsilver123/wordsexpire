@@ -163,7 +163,7 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 // --- public API --------------------------------------------------------------
 
 // The garden keeps at least one flower with room, growing a fresh one
-// (no rate limit — this is the garden's own doing) whenever all are full.
+// (no rate limit, this is the garden's own doing) whenever all are full.
 async function ensureOpenFlower(db: D1Database, at: number): Promise<void> {
   const { results } = await db.prepare('SELECT id, max_petals FROM flowers').all<{ id: string; max_petals: number }>();
   for (const f of results ?? []) {

@@ -1,12 +1,12 @@
 # WordsExpire
 
-A quiet garden where people leave brief, often intimate notes — petals — on
+A quiet garden where people leave brief, often intimate notes, petals, on
 flowers. Each flower holds a few petals. A petal fades with time unless others
 gently touch it, which renews its life. No accounts. No likes, counters, or
 streaks. Just words, and the slow weather of attention.
 
 The garden is one never-ending field you wander by dragging, and zoom through
-by scrolling — flowers settle outward like seeds in a seed-head, so it can grow
+by scrolling, flowers settle outward like seeds in a seed-head, so it can grow
 without end. When every flower is full, the garden quietly grows a new one.
 
 A note can also carry the date its words were first said (today by default, or
@@ -32,7 +32,7 @@ static garden in `/public` and the API. Storage is Cloudflare D1 (SQLite).
 No client framework, no build step.
 
 ```
-public/        the garden — index.html, styles.css, app.js
+public/        the garden, index.html, styles.css, app.js
 src/index.ts   the Worker: API, decay, rate limiting, admin
 src/profanity.ts  a small, deliberately narrow slur filter
 schema.sql     tables for flowers, petals, reactions
@@ -48,7 +48,7 @@ npm install
 npx wrangler d1 execute wordsexpire --local --file=schema.sql
 npx wrangler d1 execute wordsexpire --local --file=seed.sql
 
-# local secrets — copy and edit
+# local secrets, copy and edit
 cp .dev.vars.example .dev.vars
 
 npm run dev          # http://localhost:8787
@@ -74,7 +74,7 @@ Local development needs no Cloudflare account; the database lives on disk under
 Abuse is kept at the door, gently: per-IP rate limits (5 petals/hour, 30
 keep-alives/hour), a hidden honeypot field, a 280-character limit, a small
 filter for the clearly hateful, and one keep-alive per person per petal per
-day. IPs are never stored — only a salted SHA-256 hash.
+day. IPs are never stored, only a salted SHA-256 hash.
 
 ## Deploying
 

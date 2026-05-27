@@ -742,6 +742,11 @@ app.get('/p/:id', async (c) => {
     },
   });
   const transformed = new HTMLRewriter()
+    .on('title', {
+      element(el: Element) {
+        el.setInnerContent(title);
+      },
+    })
     .on('meta[property="og:title"]', set(title))
     .on('meta[name="twitter:title"]', set(title))
     .on('meta[property="og:description"]', set(desc))

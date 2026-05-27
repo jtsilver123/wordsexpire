@@ -1657,10 +1657,9 @@ function runOnboarding() {
     const begin = $('#begin');
 
     lines.forEach((line, i) => setTimeout(() => line.classList.add('show'), 600 + i * 1900));
-    setTimeout(() => {
-      begin.hidden = false;
-      requestAnimationFrame(() => begin.classList.add('show'));
-    }, 600 + lines.length * 1900);
+    // "begin" keeps its place in the layout from the start (invisible), so the
+    // lines never shift when it arrives; it simply fades in last.
+    setTimeout(() => begin.classList.add('show'), 600 + lines.length * 1900);
 
     begin.addEventListener('click', () => {
       localStorage.setItem('we_seen_onboarding', '1');

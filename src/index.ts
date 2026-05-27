@@ -729,7 +729,12 @@ app.get('/p/:id', async (c) => {
     .first<{ text: string }>();
   if (!row) return asset;
 
-  const desc = row.text.length > 180 ? `${row.text.slice(0, 177)}…` : row.text;
+  // The words themselves become the preview, so a text or a tweet shows the
+  // note rather than a generic line. iMessage leads with the title (and often
+  // drops the description), so the words go in the title; Twitter shows both.
+  const flat = row.text.replace(/\s+/g, ' ').trim();
+  const title = `“${flat.length > 110 ? flat.slice(0, 109) + '…' : flat}”`;
+  const desc = flat.length > 180 ? `${flat.slice(0, 177)}…` : flat;
   const url = new URL(c.req.url).toString();
   const set = (content: string) => ({
     element(el: Element) {
@@ -737,8 +742,8 @@ app.get('/p/:id', async (c) => {
     },
   });
   return new HTMLRewriter()
-    .on('meta[property="og:title"]', set('A note kept on WordsExpire'))
-    .on('meta[name="twitter:title"]', set('A note kept on WordsExpire'))
+    .on('meta[property="og:title"]', set(title))
+    .on('meta[name="twitter:title"]', set(title))
     .on('meta[property="og:description"]', set(desc))
     .on('meta[name="twitter:description"]', set(desc))
     .on('meta[property="og:url"]', set(url))

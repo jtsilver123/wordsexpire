@@ -741,13 +741,18 @@ app.get('/p/:id', async (c) => {
       el.setAttribute('content', content);
     },
   });
-  return new HTMLRewriter()
+  const transformed = new HTMLRewriter()
     .on('meta[property="og:title"]', set(title))
     .on('meta[name="twitter:title"]', set(title))
     .on('meta[property="og:description"]', set(desc))
     .on('meta[name="twitter:description"]', set(desc))
     .on('meta[property="og:url"]', set(url))
     .transform(asset);
+  // Don't let the edge (or a crawler) serve a stale, pre-rewrite copy: each
+  // note's preview must be fetched fresh so the words show.
+  const out = new Response(transformed.body, transformed);
+  out.headers.set('cache-control', 'no-cache');
+  return out;
 });
 
 // --- static fallback ---------------------------------------------------------

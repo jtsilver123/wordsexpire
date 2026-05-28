@@ -652,8 +652,17 @@ function makeKoi(you) {
   const world = $('#world');
   const node = document.createElement('div');
   node.className = 'koi';
-  node.style.left = `${Math.round(Math.random() * 1800 - 900)}px`;
-  node.style.top = `${Math.round(Math.random() * 1400 - 700)}px`;
+  // Your fish stays near the pond's center so it's always in the pond view;
+  // other fish scatter across the water.
+  let bx = Math.random() * 1800 - 900;
+  let by = Math.random() * 1400 - 700;
+  if (you) {
+    const pv = pondView();
+    bx = pv.cx + (Math.random() * 120 - 60);
+    by = pv.cy + (Math.random() * 120 - 60);
+  }
+  node.style.left = `${Math.round(bx)}px`;
+  node.style.top = `${Math.round(by)}px`;
   node.style.opacity = '0';
   node.style.transition = 'opacity 1.6s ease';
   node.style.pointerEvents = 'auto';

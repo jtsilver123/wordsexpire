@@ -513,10 +513,12 @@ function drawFlowerSvg(flower) {
     if (moved) return;
     openComposer(flower);
   });
-  heart.addEventListener('mouseenter', () =>
-    showTip(flower.hasRoom ? 'click to leave a note' : 'this flower is full', core),
-  );
-  heart.addEventListener('mouseleave', hideTip);
+  if (canHover) {
+    heart.addEventListener('mouseenter', () =>
+      showTip(flower.hasRoom ? 'click to leave a note' : 'this flower is full', core),
+    );
+    heart.addEventListener('mouseleave', hideTip);
+  }
   svg.appendChild(heart);
 
   return svg;
@@ -596,8 +598,11 @@ function buildLilypadNode(lp, idx) {
   bob.style.animationDelay = `${-r * 7}s`;
   const svg = drawLilypadSvg(`lily${idx}`);
   bob.appendChild(svg);
-  bob.addEventListener('mouseenter', () => showTip(lp.note, svg, true));
-  bob.addEventListener('mouseleave', hideTip);
+  if (canHover) {
+    bob.addEventListener('mouseenter', () => showTip(lp.note, svg, true));
+    bob.addEventListener('mouseleave', hideTip);
+  }
+  // A tap still reveals the founder's note on touch (the easter egg lives on).
   bob.addEventListener('click', (e) => {
     e.stopPropagation();
     if (moved) return;
@@ -1246,6 +1251,14 @@ function readerStep(dir) {
   const el = $('#world').querySelector(`[data-petal-id="${next.id}"]`);
   const card = $('#reader .card');
 
+  // Drift the pond behind the reader toward the note now being read, so the
+  // background follows along, calmly.
+  const fi = state.flowers.findIndex((f) => f.petals.some((p) => p.id === next.id));
+  if (fi >= 0) {
+    const fp = flowerPosition(fi);
+    focusOn(fp.x, fp.y, 1.0, 1300);
+  }
+
   if (reduceMotion || !card) {
     openReader(next, el || null);
     return;
@@ -1259,8 +1272,8 @@ function readerStep(dir) {
     card.classList.remove('swap-out');
     card.style.setProperty('--dx', dir > 0 ? '22px' : '-22px');
     card.classList.add('swap-in');
-    swapTimer = setTimeout(() => card.classList.remove('swap-in'), 240);
-  }, 170);
+    swapTimer = setTimeout(() => card.classList.remove('swap-in'), 320);
+  }, 220);
 }
 
 // ---------- reading a petal ----------
@@ -2003,8 +2016,10 @@ function applySeek(rel, label) {
   const bar = $('#seekBar');
   if (!state.seek) {
     bar.hidden = true;
+    if (chromeRevealed) $('#dailyPrompt').hidden = false; // restore the prompt
     return;
   }
+  $('#dailyPrompt').hidden = true; // the seek bar takes its place
   $('#seekBarText').textContent = `seeking · ${label}`;
   bar.hidden = false;
   // Drift toward a lit note so the highlight is found, without opening it.

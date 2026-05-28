@@ -1986,11 +1986,12 @@ textarea:focus {
   pointer-events: auto;
 }
 
-/* The day's prompt: a quiet door into writing, centered at the top. */
+/* The day's prompt: a quiet door into writing, just above the leave-a-note
+   button so the two read together (and clear of the top corners on phones). */
 .prompt {
   position: fixed;
   left: 50%;
-  top: 1.5rem;
+  bottom: 7.4rem;
   transform: translateX(-50%);
   z-index: 6;
   max-width: min(86vw, 26rem);
@@ -2013,16 +2014,18 @@ textarea:focus {
   opacity: 1;
 }
 
-/* While seeking by who, a small bar names the filter and offers a way out. */
+/* While seeking by who, a small bar (in the prompt's place) names the filter
+   and offers a way out. */
 .seek-bar {
   position: fixed;
   left: 50%;
-  bottom: 6.2rem;
+  bottom: 7.4rem;
   transform: translateX(-50%);
   z-index: 7;
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  max-width: 86vw;
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: 999px;
@@ -2032,6 +2035,16 @@ textarea:focus {
   color: var(--muted);
   box-shadow: 0 10px 26px -16px rgba(58, 51, 44, 0.5);
   animation: softIn var(--slow) var(--ease);
+}
+
+#seekBarText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seek-bar .text-link {
+  flex: none;
 }
 
 .seek-field {
@@ -2074,11 +2087,11 @@ textarea:focus {
 
 /* Turning the page between notes in the reader. */
 .reader-card.swap-out {
-  animation: swapOut 170ms var(--ease) forwards;
+  animation: swapOut 220ms var(--ease) forwards;
 }
 
 .reader-card.swap-in {
-  animation: swapIn 240ms var(--ease);
+  animation: swapIn 320ms var(--ease);
 }
 
 @keyframes swapOut {
@@ -2118,12 +2131,12 @@ textarea:focus {
     font-size: 18px;
   }
   .prompt {
-    top: 1.05rem;
+    bottom: 6.2rem;
     font-size: 0.95rem;
-    max-width: 78vw;
+    max-width: 82vw;
   }
   .seek-bar {
-    bottom: 6.4rem;
+    bottom: 6.2rem;
   }
   /* Lighten the heaviest GPU work on phones: drop the second blurred light
      layer and soften the shadow blur, keeping the surface smooth. */

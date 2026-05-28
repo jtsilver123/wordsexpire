@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS rate_events (
   created_at  INTEGER NOT NULL
 );
 
+-- Presence: one row per open tab. A fish lingers after someone leaves for a
+-- multiple of how long they stayed, so the pond feels gently alive.
+CREATE TABLE IF NOT EXISTS presence (
+  id            TEXT PRIMARY KEY,
+  first_seen    INTEGER NOT NULL,
+  linger_until  INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_petals_flower      ON petals(flower_id);
 CREATE INDEX IF NOT EXISTS idx_petals_renewed     ON petals(last_renewed_at);
 CREATE INDEX IF NOT EXISTS idx_reactions_petal_ip ON reactions(petal_id, ip_hash, created_at);

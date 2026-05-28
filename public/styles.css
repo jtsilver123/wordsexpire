@@ -809,18 +809,25 @@ select {
 .recenter svg {
   width: 23px;
   height: 23px;
+  overflow: visible;
+}
+
+/* Both icons are stacked; they cross-fade between states. */
+.recenter .ic-flower,
+.recenter .ic-pond {
+  transition: opacity 420ms var(--ease);
 }
 
 .recenter .ic-pond {
-  display: none;
+  opacity: 0;
 }
 
 .recenter.to-pond .ic-flower {
-  display: none;
+  opacity: 0;
 }
 
 .recenter.to-pond .ic-pond {
-  display: inline;
+  opacity: 1;
 }
 
 .corner-link {

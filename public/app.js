@@ -638,30 +638,64 @@ function drawKoiSvg(scale) {
   return svg;
 }
 
-// A few koi glide beneath the surface, leaving ripples as they go.
-function setupKoi() {
-  if (reduceMotion) return;
+// Each koi is another visitor (real or lingering), so the pond shows who else
+// is drawn to the same water. The number is driven by the presence heartbeat.
+let koiNodes = [];
+const FISH_TIP = 'another visitor, here in the garden';
+const presenceId =
+  window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'p' + Math.random().toString(36).slice(2) + Date.now();
+
+function makeKoi() {
   const world = $('#world');
-  const koi = [
-    { x: 220, y: 300, dur: 36, scale: 1, delay: -5 },
-    { x: -420, y: -180, dur: 49, scale: 1.3, delay: -22 },
-    { x: 520, y: -360, dur: 42, scale: 0.85, delay: -34 },
-  ];
-  koiSwimEls = [];
-  for (const k of koi) {
-    const node = document.createElement('div');
-    node.className = 'koi';
-    node.style.left = `${k.x}px`;
-    node.style.top = `${k.y}px`;
-    const swim = document.createElement('div');
-    swim.className = 'koi-swim';
-    swim.style.animationDuration = `${k.dur}s`;
-    swim.style.animationDelay = `${k.delay}s`;
-    swim.appendChild(drawKoiSvg(k.scale));
-    node.appendChild(swim);
-    world.appendChild(node);
-    koiSwimEls.push(swim);
+  const node = document.createElement('div');
+  node.className = 'koi';
+  node.style.left = `${Math.round(Math.random() * 1800 - 900)}px`;
+  node.style.top = `${Math.round(Math.random() * 1400 - 700)}px`;
+  node.style.opacity = '0';
+  node.style.transition = 'opacity 1.6s ease';
+  node.style.pointerEvents = 'auto';
+  node.style.cursor = 'pointer';
+  const swim = document.createElement('div');
+  swim.className = 'koi-swim';
+  swim.style.animationDuration = `${36 + Math.random() * 18}s`;
+  swim.style.animationDelay = `${-Math.random() * 45}s`;
+  swim.appendChild(drawKoiSvg(0.8 + Math.random() * 0.5));
+  node.appendChild(swim);
+  // Desktop hovers; touch taps. Either way, learn this fish is another person.
+  if (canHover) {
+    node.addEventListener('mouseenter', () => showTip(FISH_TIP, swim.querySelector('svg')));
+    node.addEventListener('mouseleave', hideTip);
+  } else {
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showTip(FISH_TIP, swim.querySelector('svg'));
+      setTimeout(hideTip, 3500);
+    });
   }
+  world.appendChild(node);
+  requestAnimationFrame(() => (node.style.opacity = ''));
+  koiNodes.push({ node, swim });
+  koiSwimEls.push(swim);
+}
+
+// Match the number of fish to the number of other visitors (never counting you).
+function setKoiCount(n) {
+  if (reduceMotion) return;
+  n = Math.max(0, Math.min(n, 30));
+  while (koiNodes.length < n) makeKoi();
+  while (koiNodes.length > n) koiNodes.pop().node.remove();
+  koiSwimEls = koiNodes.map((k) => k.swim);
+}
+
+// A heartbeat keeps this tab present; the response says how many are around.
+async function heartbeat() {
+  const { ok, body } = await api('/api/presence', { method: 'POST', body: JSON.stringify({ id: presenceId }) });
+  if (ok && typeof body.count === 'number') setKoiCount(body.count - 1); // a fish for everyone but you
+}
+
+function startPresence() {
+  heartbeat();
+  setInterval(heartbeat, 20000);
 }
 
 // The koi stir the water as they pass.
@@ -935,11 +969,11 @@ function updateRecenter() {
 function recenter() {
   if (recenterTargetIsPond()) {
     const pv = pondView();
-    focusOn(pv.cx, pv.cy, pv.scale, 1100);
+    focusOn(pv.cx, pv.cy, pv.scale, 1500);
   } else {
     const idx = state.flowers.findIndex((f) => f.hasRoom);
     const p = flowerPosition(idx >= 0 ? idx : Math.max(state.flowers.length - 1, 0));
-    focusOn(p.x, p.y, 1.0, 1100);
+    focusOn(p.x, p.y, 1.0, 1500);
   }
 }
 
@@ -2334,7 +2368,7 @@ async function start() {
 
   const { ok, body } = await api('/api/flowers');
   if (ok && body.flowers) setFlowers(body.flowers);
-  setupKoi();
+  startPresence();
   setupFireflies();
   applyWater(); // re-evaluate now that the fireflies layer exists
 

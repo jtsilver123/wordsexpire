@@ -1109,7 +1109,7 @@ select {
   }
 }
 
-/* Recently tended petals breathe with a soft, warm glow — visible from across
+/* Recently tended petals breathe with a soft, warm glow - visible from across
    the pond, signalling that the garden is being kept right now. */
 .petal.fresh {
   animation: petalFresh 4.6s ease-in-out infinite;
@@ -1135,6 +1135,14 @@ select {
   50% {
     filter: drop-shadow(0 0 13px rgba(247, 224, 158, 1));
   }
+}
+
+/* A pale "dew" at a petal's tip marks a note this visitor hasn't opened. */
+.unread-dot {
+  fill: rgba(255, 252, 244, 0.95);
+  stroke: rgba(150, 120, 84, 0.6);
+  stroke-width: 0.7;
+  pointer-events: none;
 }
 
 /* Replies grow a creature on the note. The group's own transform positions it,

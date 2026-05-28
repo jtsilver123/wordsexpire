@@ -342,7 +342,7 @@ function drawFlowerSvg(flower) {
       label.style.opacity = expired ? '0.55' : String(0.32 + 0.4 * a);
 
       // A note kept alive many times wears a steady golden halo that grows with
-      // each renewal — a count signal, distinct from the recency pulse and the
+      // each renewal - a count signal, distinct from the recency pulse and the
       // reply creature. Dimmed as the note fades; hidden once it has expired.
       const renewals = petal.reactionCount || 0;
       if (renewals > 0 && !expired) {
@@ -367,6 +367,11 @@ function drawFlowerSvg(flower) {
         const critter = drawCreature(stage);
         critter.setAttribute('transform', `translate(0 ${-len * 0.82}) rotate(${-angle})`);
         g.appendChild(critter);
+      }
+      // A small pale "dew" at the tip marks a note this visitor hasn't opened,
+      // clearing the moment they read it - a quiet pull to read more.
+      if (!expired && !seenSet().has(petal.id)) {
+        g.appendChild(makeEl('circle', { class: 'unread-dot', 'data-unread-for': petal.id, cx: 0, cy: (-len * 0.97).toFixed(1), r: 4.2 }));
       }
       // One handler per petal (on the group), so moving between the shape and
       // its label doesn't flicker the preview between different petals.
@@ -1034,7 +1039,10 @@ function openOverlay(el) {
 function closeOverlay(el) {
   if (!el || el.hidden) return;
   el.classList.remove('open');
-  if (el.id === 'reader' && location.pathname !== '/') history.replaceState(null, '', '/');
+  if (el.id === 'reader') {
+    if (location.pathname !== '/') history.replaceState(null, '', '/');
+    maybeNudgeLeaveNote();
+  }
   if (reduceMotion) {
     el.hidden = true;
   } else {
@@ -1155,6 +1163,11 @@ function openReader(petal, pathEl) {
   state.openPetalId = petal.id;
   state.openPetalEl = pathEl;
   history.replaceState(null, '', `/p/${petal.id}`); // a shareable address for this note
+
+  // Reading clears this note's unread mark, in storage and on the petal now.
+  markRead(petal.id);
+  const dot = $('#world').querySelector(`[data-unread-for="${petal.id}"]`);
+  if (dot) dot.remove();
 
   const img = $('#petalImage');
   if (petal.imageUrl) {
@@ -1520,6 +1533,7 @@ function saveMyNote(id) {
   const a = getMyNotes().filter((x) => x !== id);
   a.push(id);
   localStorage.setItem('we_my_notes', JSON.stringify(a.slice(-100)));
+  readCache = null; // your own note is never "unread"
   const seen = getSeen();
   if (seen[id] === undefined) seen[id] = 0; // a fresh note starts unkept
   saveSeen(seen);
@@ -1538,6 +1552,30 @@ function saveSeen(m) {
   localStorage.setItem('we_my_seen', JSON.stringify(m));
 }
 
+// Notes this visitor has opened, so unread ones can be marked and so we know
+// when they've explored enough to be invited to leave their own.
+let readCache = null;
+function getRead() {
+  try {
+    return JSON.parse(localStorage.getItem('we_read') || '[]');
+  } catch {
+    return [];
+  }
+}
+// Read OR written: both count as "seen", so no unread mark appears on them.
+function seenSet() {
+  if (!readCache) readCache = new Set([...getRead(), ...getMyNotes()]);
+  return readCache;
+}
+function markRead(id) {
+  const a = getRead();
+  if (!a.includes(id)) {
+    a.push(id);
+    localStorage.setItem('we_read', JSON.stringify(a.slice(-3000)));
+  }
+  if (readCache) readCache.add(id);
+}
+
 let welcomeTimer = 0;
 function hideWelcome() {
   const w = $('#welcome');
@@ -1548,17 +1586,46 @@ function hideWelcome() {
 // A gentle invite after planting or keeping a note: pass this small place to
 // someone you love. Shown at most once per visit, and never while the
 // "welcome back" toast is still up.
+// True while any toast or modal is up, so gentle nudges never stack or
+// interrupt reading/writing.
+function busyForNudge() {
+  const toast = ['welcome', 'shareInvite', 'leaveInvite'].some((id) => {
+    const e = document.getElementById(id);
+    return e && !e.hidden && e.classList.contains('show');
+  });
+  return toast || !!document.querySelector('.overlay.open');
+}
+
 function maybeNudgeShare() {
   if (sessionStorage.getItem('we_invite_shown')) return;
   setTimeout(() => {
-    if (sessionStorage.getItem('we_invite_shown')) return;
-    const welcome = $('#welcome');
-    if (welcome && !welcome.hidden && welcome.classList.contains('show')) return;
+    if (sessionStorage.getItem('we_invite_shown') || busyForNudge()) return;
     sessionStorage.setItem('we_invite_shown', '1');
     const el = $('#shareInvite');
     el.hidden = false;
     requestAnimationFrame(() => el.classList.add('show'));
   }, 1400);
+}
+
+// Once a reader has opened a few notes but left none of their own, invite them
+// to plant one. Shown at most once a visit, never stacked over other prompts.
+function maybeNudgeLeaveNote() {
+  if (sessionStorage.getItem('we_leave_prompt_shown')) return;
+  if (getMyNotes().length || getRead().length < 3) return;
+  setTimeout(() => {
+    if (sessionStorage.getItem('we_leave_prompt_shown') || busyForNudge()) return;
+    if (getMyNotes().length) return;
+    sessionStorage.setItem('we_leave_prompt_shown', '1');
+    const el = $('#leaveInvite');
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add('show'));
+  }, 1000);
+}
+
+function hideLeaveInvite() {
+  const el = $('#leaveInvite');
+  el.classList.remove('show');
+  setTimeout(() => (el.hidden = true), 700);
 }
 
 function hideShareInvite() {
@@ -1676,6 +1743,11 @@ function wireOverlays() {
   $('#welcomeClose').addEventListener('click', hideWelcome);
   $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
   $('#inviteLater').addEventListener('click', hideShareInvite);
+  $('#leaveInviteGo').addEventListener('click', () => {
+    hideLeaveInvite();
+    openComposer();
+  });
+  $('#leaveInviteLater').addEventListener('click', hideLeaveInvite);
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#commentForm').addEventListener('submit', submitComment);
   $('#composeForm').addEventListener('submit', placePetal);

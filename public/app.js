@@ -960,6 +960,32 @@ function updateCompass() {
   compass.hidden = false;
 }
 
+// A smooth follow-camera that keeps your fish centered as it swims, easing
+// toward it each frame until you pan, zoom, or pick another view.
+function followFish() {
+  const me = koiNodes[0];
+  if (!me) return;
+  if (reduceMotion) {
+    focusOn(parseFloat(me.node.style.left) || 0, parseFloat(me.node.style.top) || 0, 1.5, 1200);
+    return;
+  }
+  const token = ++tweenToken;
+  const targetScale = 1.5;
+  function step() {
+    if (token !== tweenToken) return; // a drag, zoom, or another move took over
+    const tr = getComputedStyle(me.swim).transform;
+    const m = tr && tr !== 'none' ? new DOMMatrixReadOnly(tr) : null;
+    const fx = (parseFloat(me.node.style.left) || 0) + (m ? m.m41 : 0);
+    const fy = (parseFloat(me.node.style.top) || 0) + (m ? m.m42 : 0);
+    view.scale += (targetScale - view.scale) * 0.07;
+    view.x += (window.innerWidth / 2 - fx * view.scale - view.x) * 0.12;
+    view.y += (window.innerHeight / 2 - fy * view.scale - view.y) * 0.12;
+    applyView();
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 // The navigator cycles through three calm framings, its icon showing the next:
 // the whole pond, your own fish, and the flower still waiting for a note.
 const NAV_STEPS = [
@@ -972,11 +998,7 @@ const NAV_STEPS = [
   },
   {
     icon: 'fish',
-    go: () => {
-      const me = koiNodes[0];
-      if (!me) return;
-      focusOn(parseFloat(me.node.style.left) || 0, parseFloat(me.node.style.top) || 0, 1.5, 1500);
-    },
+    go: followFish,
   },
   {
     icon: 'flower',

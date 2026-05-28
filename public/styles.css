@@ -241,18 +241,33 @@ select {
   margin: -16px 0 0 -32px;
 }
 
+/* The fish swims a diamond loop, holding its heading steady along each straight
+   run (so it always moves head-first) and turning only at the corners. The
+   koi art faces +x, so each rotation matches that leg's direction of travel. */
 @keyframes koiSwim {
   0% {
     transform: translate(0, -220px) rotate(36deg);
   }
+  23% {
+    transform: translate(300px, 0) rotate(36deg);
+  }
   25% {
     transform: translate(300px, 0) rotate(144deg);
+  }
+  48% {
+    transform: translate(0, 220px) rotate(144deg);
   }
   50% {
     transform: translate(0, 220px) rotate(216deg);
   }
+  73% {
+    transform: translate(-300px, 0) rotate(216deg);
+  }
   75% {
     transform: translate(-300px, 0) rotate(324deg);
+  }
+  98% {
+    transform: translate(0, -220px) rotate(324deg);
   }
   100% {
     transform: translate(0, -220px) rotate(396deg);

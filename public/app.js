@@ -180,6 +180,28 @@ function flowerPosition(index) {
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 
+// A wide view that frames the whole pond: the center and a scale that fits
+// every flower (within bounds), used for the opening zoom-in.
+function pondView() {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  const n = Math.max(state.flowers.length, 1);
+  for (let i = 0; i < n; i++) {
+    const p = flowerPosition(i);
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  }
+  const pad = 300; // a flower's visual radius plus breathing room
+  const w = maxX - minX + pad * 2;
+  const h = maxY - minY + pad * 2;
+  const scale = clamp(Math.min(window.innerWidth / w, window.innerHeight / h), 0.16, 0.5);
+  return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale };
+}
+
 // ---------- drawing a flower ----------
 
 function makeEl(tag, attrs = {}) {
@@ -2084,15 +2106,18 @@ async function start() {
   );
   setTimeout(revealChrome, 6000);
 
-  // A shared link drifts straight to its note; otherwise we arrive at the first.
+  // A shared link drifts straight to its note; otherwise we open on the whole
+  // pond, hold a beat, then glide in to the flower still waiting for a note.
   if (!openFromPath()) {
-    const first = state.flowers[0];
-    const pos = first ? flowerPosition(0) : { x: 0, y: 0 };
-    view.scale = 0.55;
-    view.x = window.innerWidth / 2 - pos.x * view.scale;
-    view.y = window.innerHeight / 2 - pos.y * view.scale;
+    const pv = pondView();
+    view.scale = pv.scale;
+    view.x = window.innerWidth / 2 - pv.cx * view.scale;
+    view.y = window.innerHeight / 2 - pv.cy * view.scale;
     applyView();
-    focusOn(pos.x, pos.y, 1.0, 1600);
+
+    const openIdx = state.flowers.findIndex((f) => f.hasRoom);
+    const pos = flowerPosition(openIdx >= 0 ? openIdx : Math.max(state.flowers.length - 1, 0));
+    setTimeout(() => focusOn(pos.x, pos.y, 1.0, 2200), 900);
   }
 
   showHint();

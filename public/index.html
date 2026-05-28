@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=50" />
+    <link rel="stylesheet" href="/styles.css?v=51" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -148,46 +148,65 @@
     <button type="button" class="wander" id="wanderBtn" hidden>wander to another</button>
     <p class="credit" id="credit" hidden><span class="credit-line">made with <span class="credit-heart">❤️</span></span> <span class="credit-line">in NYC</span></p>
 
-    <!-- The reflection, and the garden's living numbers. -->
+    <!-- The garden: a reflection, the living numbers, your notes, and ways to explore. -->
     <div id="about" class="overlay" hidden>
       <div class="card about-card" role="dialog" aria-modal="true">
-        <p class="about-reflection">
-          Nothing here lasts on its own. Words fade, the way words do; what stays is only what
-          someone came back to tend. Like a garden, like any love, it lives by being watered.
-        </p>
-        <div class="stats" id="stats"></div>
+        <button type="button" class="text-link close" data-close>close</button>
 
-        <!-- Seek by who: light up the notes said to or from a kind of person. -->
-        <label class="seek-field">
-          <span>seek notes by who they're about</span>
-          <select id="seekRel">
-            <option value="">everyone</option>
-            <option value="mother">a mother</option>
-            <option value="father">a father</option>
-            <option value="daughter">a daughter</option>
-            <option value="son">a son</option>
-            <option value="sister">a sister</option>
-            <option value="brother">a brother</option>
-            <option value="wife">a wife</option>
-            <option value="husband">a husband</option>
-            <option value="partner">a partner</option>
-            <option value="grandmother">a grandmother</option>
-            <option value="grandfather">a grandfather</option>
-            <option value="friend">a friend</option>
-            <option value="stranger">a stranger</option>
-            <option value="myself">myself</option>
-            <option value="someone_else">someone else</option>
-          </select>
-        </label>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab on" data-tab="garden">the garden</button>
+          <button type="button" class="tab" data-tab="you">you</button>
+          <button type="button" class="tab" data-tab="explore">explore</button>
+        </div>
 
-        <div class="mine" id="mine" hidden></div>
-        <div class="mine" id="kept" hidden></div>
-        <button type="button" class="text-link book-open" id="bookBtn">read every note</button>
+        <!-- the garden: why it's here, and how it's doing -->
+        <section class="tab-panel" data-panel="garden">
+          <p class="about-reflection">
+            Nothing here lasts on its own. Words fade, the way words do; what stays is only what
+            someone came back to tend. Like a garden, like any love, it lives by being watered.
+          </p>
+          <div class="stats" id="stats"></div>
+        </section>
+
+        <!-- you: the notes you've left and the ones you've kept alive -->
+        <section class="tab-panel" data-panel="you" hidden>
+          <div class="mine" id="mine" hidden></div>
+          <div class="mine" id="kept" hidden></div>
+          <p class="panel-empty" id="youEmpty" hidden>
+            you haven't left or kept a note yet. when you do, they'll gather here.
+          </p>
+        </section>
+
+        <!-- explore: seek by who, or read everything -->
+        <section class="tab-panel" data-panel="explore" hidden>
+          <label class="seek-field">
+            <span>find notes about</span>
+            <select id="seekRel">
+              <option value="">everyone</option>
+              <option value="mother">a mother</option>
+              <option value="father">a father</option>
+              <option value="daughter">a daughter</option>
+              <option value="son">a son</option>
+              <option value="sister">a sister</option>
+              <option value="brother">a brother</option>
+              <option value="wife">a wife</option>
+              <option value="husband">a husband</option>
+              <option value="partner">a partner</option>
+              <option value="grandmother">a grandmother</option>
+              <option value="grandfather">a grandfather</option>
+              <option value="friend">a friend</option>
+              <option value="stranger">a stranger</option>
+              <option value="myself">myself</option>
+              <option value="someone_else">someone else</option>
+            </select>
+          </label>
+          <button type="button" class="text-link book-open" id="bookBtn">read every note</button>
+        </section>
+
         <p class="crisis">
           if you are carrying more than you can hold, you don't have to hold it alone.
           <a class="crisis-link" href="https://findahelpline.com" target="_blank" rel="noopener">find someone to talk to</a>.
         </p>
-        <button type="button" class="text-link close" data-close>close</button>
       </div>
     </div>
 
@@ -346,6 +365,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=50" type="module"></script>
+    <script src="/app.js?v=51" type="module"></script>
   </body>
 </html>

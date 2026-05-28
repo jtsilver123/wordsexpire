@@ -811,6 +811,48 @@ select {
   max-width: 32rem;
 }
 
+/* The garden panel's sections, behind a small segmented control. */
+.tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 0 auto 1.7rem;
+  padding: 0.25rem;
+  background: var(--surface-2, #f0e8dd);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+
+.tab {
+  border: none;
+  background: none;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--slow) var(--ease), background var(--slow) var(--ease);
+}
+
+.tab.on {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 2px 8px -4px rgba(58, 51, 44, 0.4);
+}
+
+.tab-panel {
+  animation: softIn var(--slow) var(--ease);
+}
+
+.panel-empty {
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
 .about-reflection {
   margin: 0 0 2rem;
   font-size: 1.35rem;

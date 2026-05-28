@@ -1908,6 +1908,7 @@ function wireOverlays() {
     if (rel) closeOverlay($('#about'));
   });
   $('#seekClear').addEventListener('click', clearSeek);
+  document.querySelectorAll('#about .tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
   $('#milestoneClose').addEventListener('click', hideMilestone);
   $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
   $('#inviteLater').addEventListener('click', hideShareInvite);
@@ -2103,10 +2104,19 @@ function hideMilestone() {
   hideToast('milestone');
 }
 
+// Switch the garden panel between its sections.
+function showTab(name) {
+  document.querySelectorAll('#about .tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === name));
+  document.querySelectorAll('#about .tab-panel').forEach((p) => (p.hidden = p.dataset.panel !== name));
+}
+
 async function openAbout() {
   openOverlay($('#about'));
+  showTab('garden'); // always open on the reflection
   renderMine();
   renderKept();
+  // The "you" tab shows a gentle placeholder until there's something to gather.
+  $('#youEmpty').hidden = !($('#mine').hidden && $('#kept').hidden);
   const el = $('#stats');
   el.innerHTML = '<p class="stat">listening to the garden…</p>';
   const { ok, body } = await api('/api/stats');

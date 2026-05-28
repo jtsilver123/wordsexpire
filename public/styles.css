@@ -1872,6 +1872,60 @@ textarea:focus {
   overflow-y: auto;
 }
 
+/* Step to another note without leaving the reader. Pinned to the screen edges,
+   vertically centered, floating over the dimmed backdrop. */
+.reader-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: rgba(251, 247, 241, 0.86);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 1.7rem;
+  line-height: 1;
+  padding-bottom: 3px;
+  cursor: pointer;
+  z-index: 22;
+  box-shadow: 0 8px 22px -12px rgba(58, 51, 44, 0.5);
+  transition: color var(--slow) var(--ease), border-color var(--slow) var(--ease), background var(--slow) var(--ease);
+}
+
+.reader-nav:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.reader-prev {
+  left: max(0.6rem, env(safe-area-inset-left));
+}
+
+.reader-next {
+  right: max(0.6rem, env(safe-area-inset-right));
+}
+
+@media (max-width: 560px) {
+  .reader-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    background: rgba(251, 247, 241, 0.92);
+  }
+  .reader-prev {
+    left: 0.3rem;
+  }
+  .reader-next {
+    right: 0.3rem;
+  }
+}
+
 /* Honeypot stays out of sight and out of the tab order. */
 .gate {
   position: absolute;

@@ -1156,6 +1156,25 @@ function findPetal(id) {
   return null;
 }
 
+// Every note in garden order, for stepping through the reader.
+function orderedPetals() {
+  const list = [];
+  state.flowers.forEach((f) => f.petals.forEach((p) => list.push(p)));
+  return list;
+}
+
+// Move to the previous (-1) or next (+1) note, wrapping around, without
+// leaving the reader.
+function readerStep(dir) {
+  const list = orderedPetals();
+  if (list.length < 2) return;
+  let idx = list.findIndex((p) => p.id === state.openPetalId);
+  if (idx < 0) idx = 0;
+  const next = list[(idx + dir + list.length) % list.length];
+  const el = $('#world').querySelector(`[data-petal-id="${next.id}"]`);
+  openReader(next, el || null);
+}
+
 // ---------- reading a petal ----------
 
 function openReader(petal, pathEl) {
@@ -1213,6 +1232,7 @@ function openReader(petal, pathEl) {
     loadComments(petal.id);
   }
 
+  $('#reader .card').scrollTop = 0;
   openOverlay($('#reader'));
 }
 
@@ -1748,6 +1768,17 @@ function wireOverlays() {
     openComposer();
   });
   $('#leaveInviteLater').addEventListener('click', hideLeaveInvite);
+  $('#readerPrev').addEventListener('click', () => readerStep(-1));
+  $('#readerNext').addEventListener('click', () => readerStep(1));
+  // Arrow keys step through notes while the reader is open (but not while
+  // typing a reply).
+  document.addEventListener('keydown', (e) => {
+    if ($('#reader').hidden) return;
+    const t = e.target;
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.tagName === 'SELECT')) return;
+    if (e.key === 'ArrowLeft') readerStep(-1);
+    else if (e.key === 'ArrowRight') readerStep(1);
+  });
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#commentForm').addEventListener('submit', submitComment);
   $('#composeForm').addEventListener('submit', placePetal);

@@ -812,21 +812,17 @@ select {
   overflow: visible;
 }
 
-/* Both icons are stacked; they cross-fade between states. */
+/* The three icons are stacked; they cross-fade as the navigator cycles. */
 .recenter .ic-flower,
-.recenter .ic-pond {
+.recenter .ic-pond,
+.recenter .ic-fish {
+  opacity: 0;
   transition: opacity 420ms var(--ease);
 }
 
-.recenter .ic-pond {
-  opacity: 0;
-}
-
-.recenter.to-pond .ic-flower {
-  opacity: 0;
-}
-
-.recenter.to-pond .ic-pond {
+.recenter.show-pond .ic-pond,
+.recenter.show-fish .ic-fish,
+.recenter.show-flower .ic-flower {
   opacity: 1;
 }
 

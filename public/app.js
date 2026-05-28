@@ -904,7 +904,6 @@ function setFlowers(list) {
 function applyView() {
   $('#world').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
   updateCompass();
-  updateRecenter();
 }
 
 // The world point currently at the center of the screen.
@@ -961,25 +960,44 @@ function updateCompass() {
   compass.hidden = false;
 }
 
-// A maps-style locate toggle: when you're zoomed in on a flower it frames the
-// whole pond; when you're out over the pond it drifts in to the flower still
-// waiting for a note. Its icon shows whichever move comes next.
-function recenterTargetIsPond() {
-  return view.scale > 0.75;
-}
+// The navigator cycles through three calm framings, its icon showing the next:
+// the whole pond, your own fish, and the flower still waiting for a note.
+const NAV_STEPS = [
+  {
+    icon: 'pond',
+    go: () => {
+      const pv = pondView();
+      focusOn(pv.cx, pv.cy, pv.scale, 1500);
+    },
+  },
+  {
+    icon: 'fish',
+    go: () => {
+      const me = koiNodes[0];
+      if (!me) return;
+      focusOn(parseFloat(me.node.style.left) || 0, parseFloat(me.node.style.top) || 0, 1.5, 1500);
+    },
+  },
+  {
+    icon: 'flower',
+    go: () => {
+      const idx = state.flowers.findIndex((f) => f.hasRoom);
+      const p = flowerPosition(idx >= 0 ? idx : Math.max(state.flowers.length - 1, 0));
+      focusOn(p.x, p.y, 1.0, 1500);
+    },
+  },
+];
+let navIndex = 0;
 function updateRecenter() {
   const b = $('#recenter');
-  if (b) b.classList.toggle('to-pond', recenterTargetIsPond());
+  if (!b) return;
+  b.classList.remove('show-pond', 'show-fish', 'show-flower');
+  b.classList.add('show-' + NAV_STEPS[navIndex].icon);
 }
 function recenter() {
-  if (recenterTargetIsPond()) {
-    const pv = pondView();
-    focusOn(pv.cx, pv.cy, pv.scale, 1500);
-  } else {
-    const idx = state.flowers.findIndex((f) => f.hasRoom);
-    const p = flowerPosition(idx >= 0 ? idx : Math.max(state.flowers.length - 1, 0));
-    focusOn(p.x, p.y, 1.0, 1500);
-  }
+  NAV_STEPS[navIndex].go();
+  navIndex = (navIndex + 1) % NAV_STEPS.length;
+  updateRecenter();
 }
 
 function focusOn(worldX, worldY, scale, ms = 900) {

@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=53" />
+    <link rel="stylesheet" href="/styles.css?v=54" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -147,8 +147,8 @@
     </button>
     <button type="button" class="wander" id="wanderBtn" hidden>wander to another</button>
 
-    <!-- Recenter, bottom-right: frame the open flower, or the whole pond. -->
-    <button type="button" class="recenter" id="recenter" hidden aria-label="recenter the view">
+    <!-- Recenter, bottom-right: cycles the whole pond, your fish, the open flower. -->
+    <button type="button" class="recenter show-pond" id="recenter" hidden aria-label="recenter the view">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <g class="ic-flower" transform="translate(12 12)" fill="currentColor">
           <ellipse rx="2.3" ry="3.9" cy="-5" />
@@ -163,6 +163,11 @@
           <path d="M15 4 H20 V9" />
           <path d="M20 15 V20 H15" />
           <path d="M9 20 H4 V15" />
+        </g>
+        <g class="ic-fish" fill="currentColor">
+          <path d="M3 12 l4.5 -3.4 v6.8 z" />
+          <ellipse cx="13" cy="12" rx="7" ry="3.8" />
+          <circle cx="16.6" cy="11" r="1" fill="rgba(251,247,241,0.9)" />
         </g>
       </svg>
     </button>
@@ -385,6 +390,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=54" type="module"></script>
+    <script src="/app.js?v=55" type="module"></script>
   </body>
 </html>

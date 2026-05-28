@@ -222,9 +222,9 @@ function flowerPosition(index) {
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 
-// A wide view that frames the whole pond: the center and a scale that fits
-// every flower (within bounds), used for the opening zoom-in.
-function pondView() {
+// The bounding box of every flower. The pond grows with the flowers, and the
+// fish are kept within this box (so they never leave the pond view).
+function pondBounds() {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -237,11 +237,19 @@ function pondView() {
     minY = Math.min(minY, p.y);
     maxY = Math.max(maxY, p.y);
   }
-  const pad = 300; // a flower's visual radius plus breathing room
-  const w = maxX - minX + pad * 2;
-  const h = maxY - minY + pad * 2;
-  const scale = clamp(Math.min(window.innerWidth / w, window.innerHeight / h), 0.16, 0.5);
-  return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, scale };
+  return { minX, maxX, minY, maxY };
+}
+
+const POND_PAD = 360; // a flower's reach plus the fish's swim, so fish stay framed
+
+// A wide view that frames the whole pond: the center and a scale that fits
+// every flower (and the fish, which stay within the bounds plus their swim).
+function pondView() {
+  const b = pondBounds();
+  const w = b.maxX - b.minX + POND_PAD * 2;
+  const h = b.maxY - b.minY + POND_PAD * 2;
+  const scale = clamp(Math.min(window.innerWidth / w, window.innerHeight / h), 0.14, 0.5);
+  return { cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2, scale };
 }
 
 // ---------- drawing a flower ----------
@@ -652,14 +660,17 @@ function makeKoi(you) {
   const world = $('#world');
   const node = document.createElement('div');
   node.className = 'koi';
-  // Your fish stays near the pond's center so it's always in the pond view;
-  // other fish scatter across the water.
-  let bx = Math.random() * 1800 - 900;
-  let by = Math.random() * 1400 - 700;
+  // Every fish lives within the flower bounds; with its swim contained by the
+  // pond's padding, it can never leave the pond view. You stay near the center.
+  const b = pondBounds();
+  let bx;
+  let by;
   if (you) {
-    const pv = pondView();
-    bx = pv.cx + (Math.random() * 120 - 60);
-    by = pv.cy + (Math.random() * 120 - 60);
+    bx = (b.minX + b.maxX) / 2 + (Math.random() * 120 - 60);
+    by = (b.minY + b.maxY) / 2 + (Math.random() * 120 - 60);
+  } else {
+    bx = b.minX + Math.random() * (b.maxX - b.minX);
+    by = b.minY + Math.random() * (b.maxY - b.minY);
   }
   node.style.left = `${Math.round(bx)}px`;
   node.style.top = `${Math.round(by)}px`;

@@ -1137,6 +1137,27 @@ select {
   }
 }
 
+/* Replies grow a creature on the note. The group's own transform positions it,
+   so only the butterfly's wings (a child group) are animated. */
+.critter {
+  pointer-events: none;
+}
+
+.critter-butterfly .bfly-wings {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flutter 1.7s ease-in-out infinite;
+}
+
+@keyframes flutter {
+  0%, 100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.6);
+  }
+}
+
 .heart {
   transition: transform var(--slow) var(--ease);
   transform-box: fill-box;

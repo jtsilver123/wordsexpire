@@ -100,6 +100,7 @@ type PetalRow = {
   is_example: number;
   last_renewed_at: number;
   reaction_count: number;
+  comment_count?: number;
 };
 
 function shapePetal(p: PetalRow, at: number) {
@@ -116,6 +117,7 @@ function shapePetal(p: PetalRow, at: number) {
     imageUrl: p.image_id ? `/i/${p.image_id}` : null,
     isExample: !!p.is_example,
     reactionCount: p.reaction_count,
+    commentCount: p.comment_count ?? 0,
     aliveness: a,
     // Once aliveness hits zero the petal has expired: it stays on the flower,
     // wilted, its words no longer legible, until a reaction brings it back.
@@ -154,7 +156,10 @@ async function loadFlower(db: D1Database, flowerId: string, at: number) {
 
   // Expired petals are kept (they linger, wilted), so there is no time filter.
   const { results } = await db
-    .prepare(`SELECT ${PETAL_COLUMNS} FROM petals WHERE flower_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`)
+    .prepare(
+      `SELECT ${PETAL_COLUMNS}, (SELECT COUNT(*) FROM comments c WHERE c.petal_id = petals.id AND c.deleted_at IS NULL) AS comment_count ` +
+        `FROM petals WHERE flower_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
+    )
     .bind(flowerId)
     .all<PetalRow>();
 

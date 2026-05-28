@@ -195,6 +195,49 @@ function petalPath(seed) {
   );
 }
 
+// Replies grow a small creature on the note: the first brings a caterpillar,
+// a few curl it into a chrysalis, and enough open it into a butterfly.
+function creatureStage(count) {
+  if (count >= 5) return 'butterfly';
+  if (count >= 3) return 'chrysalis';
+  if (count >= 1) return 'caterpillar';
+  return null;
+}
+
+// Drawn centered at the origin; the caller positions and uprights it.
+function drawCreature(stage) {
+  const g = makeEl('g', { class: 'critter critter-' + stage });
+  if (stage === 'caterpillar') {
+    const greens = ['#6f9a55', '#79a85e', '#84b268', '#6f9a55'];
+    [-9, -4.5, 0, 4.5].forEach((x, i) => {
+      g.appendChild(makeEl('circle', { cx: x, cy: 0, r: 4.4, fill: greens[i], stroke: 'rgba(40,60,30,0.25)', 'stroke-width': 0.5 }));
+    });
+    g.appendChild(makeEl('circle', { cx: 9, cy: -0.5, r: 5, fill: '#5f8a48' }));
+    g.appendChild(makeEl('circle', { cx: 10.8, cy: -1.6, r: 1, fill: '#26331c' }));
+    g.appendChild(makeEl('path', { d: 'M 10 -4.5 q 1 -3 3 -4', stroke: '#5f8a48', 'stroke-width': 0.9, fill: 'none', 'stroke-linecap': 'round' }));
+    g.appendChild(makeEl('path', { d: 'M 12 -4 q 2 -2 4 -2.5', stroke: '#5f8a48', 'stroke-width': 0.9, fill: 'none', 'stroke-linecap': 'round' }));
+  } else if (stage === 'chrysalis') {
+    g.appendChild(makeEl('path', { d: 'M 0 -10 q 1.5 -3 0 -5', stroke: 'rgba(80,90,50,0.6)', 'stroke-width': 0.8, fill: 'none' }));
+    g.appendChild(makeEl('path', { d: 'M 0 -11 C 6 -8, 6 7, 0 10 C -6 7, -6 -8, 0 -11 Z', fill: '#9aa85e', stroke: 'rgba(70,80,40,0.3)', 'stroke-width': 0.5 }));
+    g.appendChild(makeEl('path', { d: 'M -3 -4 L 3 -4 M -3.2 0 L 3.2 0 M -2.6 4 L 2.6 4', stroke: 'rgba(70,80,40,0.4)', 'stroke-width': 0.7 }));
+    g.appendChild(makeEl('ellipse', { cx: 0, cy: 1.5, rx: 1.8, ry: 4, fill: 'rgba(230,200,120,0.5)' }));
+  } else if (stage === 'butterfly') {
+    const wings = makeEl('g', { class: 'bfly-wings' });
+    const mk = (cx, cy, rx, ry) => makeEl('ellipse', { cx, cy, rx, ry, fill: '#d99a5c', stroke: 'rgba(120,70,40,0.35)', 'stroke-width': 0.6 });
+    wings.appendChild(mk(-6, -3.5, 6, 5));
+    wings.appendChild(mk(6, -3.5, 6, 5));
+    wings.appendChild(mk(-5, 4.5, 4.6, 4));
+    wings.appendChild(mk(5, 4.5, 4.6, 4));
+    wings.appendChild(makeEl('circle', { cx: -6, cy: -3.5, r: 1.5, fill: 'rgba(255,245,220,0.85)' }));
+    wings.appendChild(makeEl('circle', { cx: 6, cy: -3.5, r: 1.5, fill: 'rgba(255,245,220,0.85)' }));
+    g.appendChild(wings);
+    g.appendChild(makeEl('ellipse', { cx: 0, cy: 0, rx: 1.3, ry: 7, fill: '#3a2e22' }));
+    g.appendChild(makeEl('path', { d: 'M 0 -6 q -2 -3 -4 -4', stroke: '#3a2e22', 'stroke-width': 0.8, fill: 'none', 'stroke-linecap': 'round' }));
+    g.appendChild(makeEl('path', { d: 'M 0 -6 q 2 -3 4 -4', stroke: '#3a2e22', 'stroke-width': 0.8, fill: 'none', 'stroke-linecap': 'round' }));
+  }
+  return g;
+}
+
 function drawFlowerSvg(flower) {
   const size = 400;
   const cx = size / 2;
@@ -294,6 +337,14 @@ function drawFlowerSvg(flower) {
       g.appendChild(under);
       g.appendChild(path);
       g.appendChild(label);
+      // Replies bring a small life to the note: a caterpillar, then a chrysalis,
+      // then a butterfly. It rides the petal, kept upright like the label.
+      const stage = creatureStage(petal.commentCount || 0);
+      if (stage && !expired) {
+        const critter = drawCreature(stage);
+        critter.setAttribute('transform', `translate(0 ${-len * 0.82}) rotate(${-angle})`);
+        g.appendChild(critter);
+      }
       // One handler per petal (on the group), so moving between the shape and
       // its label doesn't flicker the preview between different petals.
       g.classList.add('bloom-hit');
@@ -1052,7 +1103,24 @@ async function submitComment(e) {
     el.appendChild(commentEl(body.comment));
     el.scrollTop = el.scrollHeight;
     setRepliesSummary(el.childElementCount);
+    // Grow the creature on this note: bump the count in state and redraw the
+    // pond quietly behind the reader, then re-grab the open petal element so
+    // keep-alive still animates the right one.
+    const petal = findPetal(state.openPetalId);
+    if (petal) {
+      petal.commentCount = (petal.commentCount || 0) + 1;
+      renderWorld();
+      state.openPetalEl = $('#world').querySelector(`[data-petal-id="${state.openPetalId}"]`);
+    }
   }
+}
+
+function findPetal(id) {
+  for (const f of state.flowers) {
+    const p = f.petals.find((x) => x.id === id);
+    if (p) return p;
+  }
+  return null;
 }
 
 // ---------- reading a petal ----------

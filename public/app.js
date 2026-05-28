@@ -750,22 +750,36 @@ const SEASON_DRIFT = {
   winter: { cls: 'snow', n: 18 },
   summer: null,
 };
+// A generous region around the flowers, in world coordinates, for atmosphere
+// (fireflies, seasonal drift) that pans and zooms with the pond.
+function atmosRegion(pad) {
+  const b = pondBounds();
+  return { x0: b.minX - pad, x1: b.maxX + pad, y0: b.minY - pad, y1: b.maxY + pad };
+}
+
 function setupSeason() {
   if (reduceMotion) return;
   const layer = $('#season');
   if (!layer) return;
   const def = SEASON_DRIFT[currentSeason()];
   if (!def) return;
-  const n = window.innerWidth < 560 ? Math.round(def.n * 0.6) : def.n;
+  const r = atmosRegion(600);
+  const fall = Math.round(r.y1 - r.y0);
+  // Count scales with the world area so the drift stays visible as the pond grows.
+  const area = (r.x1 - r.x0) * (r.y1 - r.y0);
+  const cap = window.innerWidth < 560 ? 24 : 60;
+  const n = Math.max(def.n, Math.min(Math.round(area / 100000), cap));
   for (let i = 0; i < n; i++) {
     const p = document.createElement('div');
     p.className = 'drift ' + def.cls;
-    p.style.left = `${Math.random() * 100}vw`;
-    p.style.setProperty('--drift-x', `${Math.round(Math.random() * 140 - 70)}px`);
+    p.style.left = `${Math.round(r.x0 + Math.random() * (r.x1 - r.x0))}px`;
+    p.style.top = `${Math.round(r.y0)}px`;
+    p.style.setProperty('--drift-x', `${Math.round(Math.random() * 160 - 80)}px`);
     p.style.setProperty('--drift-r', `${Math.round(Math.random() * 360 - 180)}deg`);
     p.style.setProperty('--drift-op', (0.4 + Math.random() * 0.4).toFixed(2));
-    p.style.animationDuration = `${14 + Math.random() * 16}s`;
-    p.style.animationDelay = `${(-Math.random() * 30).toFixed(1)}s`;
+    p.style.setProperty('--fall', `${fall}px`);
+    p.style.animationDuration = `${16 + Math.random() * 16}s`;
+    p.style.animationDelay = `${(-Math.random() * 32).toFixed(1)}s`;
     layer.appendChild(p);
   }
 }
@@ -773,12 +787,13 @@ function setupSeason() {
 function setupFireflies() {
   if (reduceMotion) return;
   const layer = $('#fireflies');
-  const n = window.innerWidth < 560 ? 8 : 14; // fewer on phones
+  const r = atmosRegion(700); // world-space, drifting over the pond
+  const n = window.innerWidth < 560 ? 12 : 22;
   for (let i = 0; i < n; i++) {
     const f = document.createElement('div');
     f.className = 'firefly';
-    f.style.left = `${Math.random() * 100}vw`;
-    f.style.top = `${Math.random() * 100}vh`;
+    f.style.left = `${Math.round(r.x0 + Math.random() * (r.x1 - r.x0))}px`;
+    f.style.top = `${Math.round(r.y0 + Math.random() * (r.y1 - r.y0))}px`;
     f.style.setProperty('--fx', `${Math.random() * 120 - 60}px`);
     f.style.setProperty('--fy', `${Math.random() * 120 - 60}px`);
     f.style.setProperty('--fd', `${16 + Math.random() * 16}s`);
@@ -919,14 +934,16 @@ function settleWave() {
   for (const f of flowerNodes) f.node.style.transform = 'translate(0px, 0px)';
 }
 
-function makeRipple(x, y, big) {
+// Takes screen coordinates; places the ripple in world space so it drifts with
+// the pond as you pan and zoom.
+function makeRipple(sx, sy, big) {
   if (reduceMotion) return;
   const layer = $('#ripples');
   if (!layer || layer.childElementCount > 32) return;
   const r = document.createElement('div');
   r.className = big ? 'ripple ripple-big' : 'ripple';
-  r.style.left = `${x}px`;
-  r.style.top = `${y}px`;
+  r.style.left = `${(sx - view.x) / view.scale}px`;
+  r.style.top = `${(sy - view.y) / view.scale}px`;
   r.addEventListener('animationend', () => r.remove());
   layer.appendChild(r);
 }

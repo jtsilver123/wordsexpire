@@ -161,12 +161,14 @@ select {
 }
 
 /* Momentary ripples that follow the cursor across the water. */
+/* A zero-size anchor at the world origin; children sit at world coordinates so
+   they pan and zoom with the pond. (Same for .fireflies and .season-layer.) */
 .ripples {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 1;
   pointer-events: none;
-  overflow: hidden;
 }
 
 .ripple {
@@ -297,22 +299,21 @@ select {
 /* What the season drifts on the air: blossoms, leaves, or snow. */
 .season-layer {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 3;
   pointer-events: none;
-  overflow: hidden;
 }
 
 .drift {
   position: absolute;
-  top: -6vh;
   will-change: transform, opacity;
   animation: seasonFall linear infinite;
 }
 
 @keyframes seasonFall {
   0% {
-    transform: translate(0, -6vh) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
     opacity: 0;
   }
   8% {
@@ -322,7 +323,7 @@ select {
     opacity: var(--drift-op, 0.6);
   }
   100% {
-    transform: translate(var(--drift-x, 30px), 108vh) rotate(var(--drift-r, 180deg));
+    transform: translate(var(--drift-x, 30px), var(--fall, 1600px)) rotate(var(--drift-r, 180deg));
     opacity: 0;
   }
 }
@@ -350,7 +351,8 @@ select {
 
 .fireflies {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 3;
   pointer-events: none;
   opacity: 0;

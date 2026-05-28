@@ -935,7 +935,8 @@ let compassTarget = -1;
 function updateCompass() {
   const compass = $('#compass');
   if (!compass) return;
-  if (!state.flowers.length) {
+  // While following your fish, the compass would only get in the way.
+  if (!state.flowers.length || followActive()) {
     compass.hidden = true;
     return;
   }
@@ -960,27 +961,52 @@ function updateCompass() {
   compass.hidden = false;
 }
 
-// A smooth follow-camera that keeps your fish centered as it swims, easing
-// toward it each frame until you pan, zoom, or pick another view.
+// While this owns the current tween, the camera is following your fish.
+let followToken = -1;
+function followActive() {
+  return followToken >= 0 && followToken === tweenToken;
+}
+
+// The fish's live world position (its base point plus the swim animation).
+function fishPos(me) {
+  const tr = getComputedStyle(me.swim).transform;
+  const m = tr && tr !== 'none' ? new DOMMatrixReadOnly(tr) : null;
+  return {
+    x: (parseFloat(me.node.style.left) || 0) + (m ? m.m41 : 0),
+    y: (parseFloat(me.node.style.top) || 0) + (m ? m.m42 : 0),
+  };
+}
+
+const FISH_SCALE = 1.15; // close, but not too tight
+
+// Glide slowly to your fish, then trail it gently. Cancels the moment you
+// take over (drag, zoom, or another view), which also frees the compass.
 function followFish() {
   const me = koiNodes[0];
   if (!me) return;
+  const p = fishPos(me);
   if (reduceMotion) {
-    focusOn(parseFloat(me.node.style.left) || 0, parseFloat(me.node.style.top) || 0, 1.5, 1200);
+    focusOn(p.x, p.y, FISH_SCALE, 1400);
     return;
   }
+  const ms = 2000; // a slow, calm glide in
+  focusOn(p.x, p.y, FISH_SCALE, ms);
+  followToken = tweenToken;
+  setTimeout(() => {
+    if (followToken !== tweenToken) return; // interrupted during the glide
+    trailFish(me);
+  }, ms);
+}
+
+function trailFish(me) {
   const token = ++tweenToken;
-  const targetScale = 1.15; // close, but not too tight
+  followToken = token;
   function step() {
     if (token !== tweenToken) return; // a drag, zoom, or another move took over
-    const tr = getComputedStyle(me.swim).transform;
-    const m = tr && tr !== 'none' ? new DOMMatrixReadOnly(tr) : null;
-    const fx = (parseFloat(me.node.style.left) || 0) + (m ? m.m41 : 0);
-    const fy = (parseFloat(me.node.style.top) || 0) + (m ? m.m42 : 0);
-    // Gentle easing: the camera glides on, then trails the fish naturally.
-    view.scale += (targetScale - view.scale) * 0.05;
-    view.x += (window.innerWidth / 2 - fx * view.scale - view.x) * 0.08;
-    view.y += (window.innerHeight / 2 - fy * view.scale - view.y) * 0.08;
+    const p = fishPos(me);
+    view.scale += (FISH_SCALE - view.scale) * 0.06;
+    view.x += (window.innerWidth / 2 - p.x * view.scale - view.x) * 0.08;
+    view.y += (window.innerHeight / 2 - p.y * view.scale - view.y) * 0.08;
     applyView();
     requestAnimationFrame(step);
   }

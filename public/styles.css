@@ -1109,6 +1109,34 @@ select {
   }
 }
 
+/* Recently tended petals breathe with a soft, warm glow — visible from across
+   the pond, signalling that the garden is being kept right now. */
+.petal.fresh {
+  animation: petalFresh 4.6s ease-in-out infinite;
+}
+
+.petal.just-now {
+  animation: petalJustNow 2.8s ease-in-out infinite;
+}
+
+@keyframes petalFresh {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(232, 200, 130, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(232, 200, 130, 0.75));
+  }
+}
+
+@keyframes petalJustNow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(247, 224, 158, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 13px rgba(247, 224, 158, 1));
+  }
+}
+
 .heart {
   transition: transform var(--slow) var(--ease);
   transform-box: fill-box;

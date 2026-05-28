@@ -264,9 +264,13 @@ function drawFlowerSvg(flower) {
       });
       under.style.opacity = expired ? '0.16' : String(0.32 * a + 0.12);
 
+      // "fresh" if tended within the last day, "just-now" if within the last
+      // hour: a soft golden pulse signals the garden is being kept right now.
+      const fresh = !expired && a > 0.857;
+      const justNow = !expired && a > 0.994;
       const path = makeEl('path', {
         d: petalPath(petal.id),
-        class: 'petal' + (expired ? ' expired' : ''),
+        class: 'petal' + (expired ? ' expired' : justNow ? ' just-now' : fresh ? ' fresh' : ''),
         fill: `url(#pg-${flower.id}-${i})`,
         stroke: rgbStr(deep),
         'stroke-width': '0.75',

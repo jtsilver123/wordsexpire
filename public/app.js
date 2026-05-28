@@ -42,6 +42,36 @@ const PROMPTS = [
   'who do you miss?',
 ];
 
+// One prompt for the day, the same for everyone, rotating gently.
+function dailyPrompt() {
+  const day = Math.floor(Date.now() / 86400000);
+  return PROMPTS[day % PROMPTS.length];
+}
+
+// Notes this visitor has kept alive, so they can find them again.
+function getKept() {
+  try {
+    return JSON.parse(localStorage.getItem('we_kept') || '[]');
+  } catch {
+    return [];
+  }
+}
+let keptCache = null;
+function keptSet() {
+  if (!keptCache) keptCache = new Set(getKept());
+  return keptCache;
+}
+function markKept(id) {
+  const a = getKept();
+  if (!a.includes(id)) {
+    a.push(id);
+    localStorage.setItem('we_kept', JSON.stringify(a.slice(-2000)));
+  }
+  if (keptCache) keptCache.add(id);
+}
+
+const MILESTONES = [3, 5, 10, 25, 50, 100];
+
 const LIFESPAN_SECONDS = 604800; // 7 days; mirrors the Worker's decay window
 const MIN_CHARS = 2; // a note needs at least a little
 const MAX_CHARS = 280;
@@ -58,6 +88,7 @@ const state = {
   openPetalId: null,
   openPetalEl: null,
   composeFlowerId: null,
+  seek: null, // an active "seek by who" filter (a relationship key) or null
 };
 
 // The world transform: where we are and how close.
@@ -340,9 +371,16 @@ function drawFlowerSvg(flower) {
       // hour: a soft golden pulse signals the garden is being kept right now.
       const fresh = !expired && a > 0.857;
       const justNow = !expired && a > 0.994;
+      // When seeking by who, matching notes stay lit and the rest recede.
+      const sought = state.seek && petal.relationship === state.seek;
+      const dimmed = state.seek && petal.relationship !== state.seek;
       const path = makeEl('path', {
         d: petalPath(petal.id),
-        class: 'petal' + (expired ? ' expired' : justNow ? ' just-now' : fresh ? ' fresh' : ''),
+        class:
+          'petal' +
+          (expired ? ' expired' : justNow ? ' just-now' : fresh ? ' fresh' : '') +
+          (sought ? ' sought' : '') +
+          (dimmed ? ' dimmed' : ''),
         fill: `url(#pg-${flower.id}-${i})`,
         stroke: rgbStr(deep),
         'stroke-width': '0.75',
@@ -394,6 +432,16 @@ function drawFlowerSvg(flower) {
       // clearing the moment they read it - a quiet pull to read more.
       if (!expired && !seenSet().has(petal.id)) {
         g.appendChild(makeEl('circle', { class: 'unread-dot', 'data-unread-for': petal.id, cx: 0, cy: (-len * 0.97).toFixed(1), r: 4.2 }));
+      }
+      // A small heart near the base marks a note this visitor has kept alive,
+      // so they can find the ones they've tended.
+      if (keptSet().has(petal.id)) {
+        const heart = makeEl('path', {
+          class: 'kept-mark',
+          d: 'M0 2.2 C-2.4 -0.6,-5 0.6,-5 -1.8 C-5 -3.6,-2.4 -4,0 -1.4 C2.4 -4,5 -3.6,5 -1.8 C5 0.6,2.4 -0.6,0 2.2 Z',
+          transform: `translate(0 ${(-len * 0.34).toFixed(1)}) rotate(${-angle})`,
+        });
+        g.appendChild(heart);
       }
       // One handler per petal (on the group), so moving between the shape and
       // its label doesn't flicker the preview between different petals.
@@ -1186,7 +1234,9 @@ function orderedPetals() {
 }
 
 // Move to the previous (-1) or next (+1) note, wrapping around, without
-// leaving the reader.
+// leaving the reader. The card cross-fades and slides toward the direction
+// of travel so the change feels like turning a page.
+let swapTimer = 0;
 function readerStep(dir) {
   const list = orderedPetals();
   if (list.length < 2) return;
@@ -1194,7 +1244,23 @@ function readerStep(dir) {
   if (idx < 0) idx = 0;
   const next = list[(idx + dir + list.length) % list.length];
   const el = $('#world').querySelector(`[data-petal-id="${next.id}"]`);
-  openReader(next, el || null);
+  const card = $('#reader .card');
+
+  if (reduceMotion || !card) {
+    openReader(next, el || null);
+    return;
+  }
+  clearTimeout(swapTimer);
+  card.style.setProperty('--dx', dir > 0 ? '-22px' : '22px');
+  card.classList.remove('swap-in');
+  card.classList.add('swap-out');
+  swapTimer = setTimeout(() => {
+    openReader(next, el || null);
+    card.classList.remove('swap-out');
+    card.style.setProperty('--dx', dir > 0 ? '22px' : '-22px');
+    card.classList.add('swap-in');
+    swapTimer = setTimeout(() => card.classList.remove('swap-in'), 240);
+  }, 170);
 }
 
 // ---------- reading a petal ----------
@@ -1269,6 +1335,7 @@ async function keepAlive(e) {
     return;
   }
 
+  markKept(state.openPetalId); // remember a note this visitor has tended
   $('.keep').classList.add('kept');
   const life = $('#petalLife');
   if (body.alreadyKept) {
@@ -1413,7 +1480,10 @@ async function openComposer(flower) {
   state.composeFlowerId = target.id;
   focusFlower(target.id, 1.15);
 
-  $('#composePrompt').textContent = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+  // A warmer welcome for someone's very first note; the day's prompt otherwise.
+  const first = getMyNotes().length === 0;
+  $('#composeCaption').textContent = first ? 'your first words. there is no wrong way.' : 'Leave something small.';
+  $('#composePrompt').textContent = dailyPrompt();
   $('#composeText').value = '';
   $('#composeWhen').max = todayInputValue();
   $('#composeWhen').value = todayInputValue();
@@ -1631,7 +1701,7 @@ function hideWelcome() {
 // True while any toast or modal is up, so gentle nudges never stack or
 // interrupt reading/writing.
 function busyForNudge() {
-  const toast = ['welcome', 'shareInvite', 'leaveInvite'].some((id) => {
+  const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone'].some((id) => {
     const e = document.getElementById(id);
     return e && !e.hidden && e.classList.contains('show');
   });
@@ -1714,8 +1784,29 @@ function welcomeBack() {
   const seen = getSeen();
   const tended = mine.filter((p) => (p.reactionCount || 0) > (seen[p.id] ?? 0));
   const fading = mine.filter((p) => !p.expired && p.aliveness > 0 && p.aliveness < 0.3);
+
+  // Did any of my notes cross a kept-alive milestone since I last looked?
+  let milePetal = null;
+  let mileN = 0;
+  for (const p of mine) {
+    const prev = seen[p.id] ?? 0;
+    const now = p.reactionCount || 0;
+    for (const m of MILESTONES) {
+      if (prev < m && now >= m && m > mileN) {
+        mileN = m;
+        milePetal = p;
+      }
+    }
+  }
+
   mine.forEach((p) => (seen[p.id] = p.reactionCount || 0)); // reset the baseline
   saveSeen(seen);
+
+  if (milePetal) {
+    $('#hint').classList.remove('show');
+    showMilestone(milePetal, mileN);
+    return;
+  }
 
   let text = null;
   let target = null;
@@ -1783,6 +1874,15 @@ function wireOverlays() {
     focusOn(p.x, p.y, 1.0);
   });
   $('#welcomeClose').addEventListener('click', hideWelcome);
+  $('#dailyPrompt').addEventListener('click', () => openComposer());
+  $('#seekRel').addEventListener('change', (e) => {
+    const rel = e.target.value;
+    const label = e.target.options[e.target.selectedIndex].text;
+    applySeek(rel, label);
+    if (rel) closeOverlay($('#about'));
+  });
+  $('#seekClear').addEventListener('click', clearSeek);
+  $('#milestoneClose').addEventListener('click', hideMilestone);
   $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
   $('#inviteLater').addEventListener('click', hideShareInvite);
   $('#leaveInviteGo').addEventListener('click', () => {
@@ -1896,9 +1996,93 @@ function openBook() {
   openOverlay($('#book'));
 }
 
+// Light up the notes about a kind of person; let the rest of the pond recede.
+function applySeek(rel, label) {
+  state.seek = rel || null;
+  renderWorld();
+  const bar = $('#seekBar');
+  if (!state.seek) {
+    bar.hidden = true;
+    return;
+  }
+  $('#seekBarText').textContent = `seeking · ${label}`;
+  bar.hidden = false;
+  // Drift toward a lit note so the highlight is found, without opening it.
+  for (const f of state.flowers) {
+    if (f.petals.some((p) => p.relationship === state.seek && !p.expired)) {
+      focusFlower(f.id, 0.92);
+      break;
+    }
+  }
+}
+
+function clearSeek() {
+  $('#seekRel').value = '';
+  applySeek(null);
+}
+
+// The notes this visitor has kept alive (others' words they tended).
+function renderKept() {
+  const el = $('#kept');
+  el.textContent = '';
+  const byId = new Map();
+  state.flowers.forEach((f) => f.petals.forEach((p) => byId.set(p.id, p)));
+  const own = new Set(getMyNotes());
+  const kept = getKept()
+    .map((id) => byId.get(id))
+    .filter((p) => p && !own.has(p.id))
+    .reverse();
+  if (!kept.length) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  const head = document.createElement('p');
+  head.className = 'mine-head';
+  head.textContent = 'notes you have kept alive';
+  el.appendChild(head);
+  for (const p of kept) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'mine-row';
+    const t = document.createElement('span');
+    t.className = 'mine-text';
+    t.textContent = p.text;
+    const s = document.createElement('span');
+    s.className = 'mine-status';
+    s.textContent = p.expired ? 'faded' : '';
+    row.append(t, s);
+    row.addEventListener('click', () => {
+      closeOverlay($('#about'));
+      goToPetal(p.id);
+    });
+    el.appendChild(row);
+  }
+}
+
+// A quiet milestone: one of your notes has been kept alive a notable number of
+// times. Offered with the chance to share it.
+function showMilestone(petal, n) {
+  $('#milestoneText').textContent = `your words have been kept alive ${n} times.`;
+  $('#milestoneSnippet').textContent = `“${petal.text.length > 70 ? `${petal.text.slice(0, 70)}…` : petal.text}”`;
+  $('#milestoneShare').onclick = () => shareNote(petal.id, $('#milestoneShare'));
+  const el = $('#milestone');
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('show'));
+  clearTimeout(welcomeTimer);
+  welcomeTimer = setTimeout(hideMilestone, 12000);
+}
+
+function hideMilestone() {
+  const el = $('#milestone');
+  el.classList.remove('show');
+  setTimeout(() => (el.hidden = true), 700);
+}
+
 async function openAbout() {
   openOverlay($('#about'));
   renderMine();
+  renderKept();
   const el = $('#stats');
   el.innerHTML = '<p class="stat">listening to the garden…</p>';
   const { ok, body } = await api('/api/stats');
@@ -2080,7 +2264,8 @@ let chromeRevealed = false;
 function revealChrome() {
   if (chromeRevealed) return;
   chromeRevealed = true;
-  for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#credit', '#sound']) $(sel).hidden = false;
+  $('#dailyPrompt').textContent = dailyPrompt();
+  for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#credit', '#sound', '#dailyPrompt']) $(sel).hidden = false;
 }
 
 async function start() {

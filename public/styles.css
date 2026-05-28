@@ -1986,6 +1986,119 @@ textarea:focus {
   pointer-events: auto;
 }
 
+/* The day's prompt: a quiet door into writing, centered at the top. */
+.prompt {
+  position: fixed;
+  left: 50%;
+  top: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: min(86vw, 26rem);
+  background: none;
+  border: none;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  text-align: center;
+  opacity: 0.82;
+  transition: color var(--slow) var(--ease), opacity var(--slow) var(--ease);
+  animation: softIn var(--slower) var(--ease);
+}
+
+.prompt:hover {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* While seeking by who, a small bar names the filter and offers a way out. */
+.seek-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 6.2rem;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.4rem 0.5rem 0.4rem 0.9rem;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--muted);
+  box-shadow: 0 10px 26px -16px rgba(58, 51, 44, 0.5);
+  animation: softIn var(--slow) var(--ease);
+}
+
+.seek-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1.4rem;
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.seek-field select {
+  font-size: 0.95rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Seeking: matching notes hold their light, the rest recede. */
+.petal.dimmed {
+  opacity: 0.12 !important;
+  transition: opacity var(--slow) var(--ease);
+}
+
+.petal.sought {
+  filter: drop-shadow(0 0 7px rgba(247, 224, 158, 0.85));
+}
+
+/* A small heart near the base marks a note this visitor has kept alive. */
+.kept-mark {
+  fill: var(--accent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Turning the page between notes in the reader. */
+.reader-card.swap-out {
+  animation: swapOut 170ms var(--ease) forwards;
+}
+
+.reader-card.swap-in {
+  animation: swapIn 240ms var(--ease);
+}
+
+@keyframes swapOut {
+  to {
+    opacity: 0;
+    transform: translateX(var(--dx, 0));
+  }
+}
+
+@keyframes swapIn {
+  from {
+    opacity: 0;
+    transform: translateX(var(--dx, 0));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 [hidden] {
   display: none !important;
 }
@@ -2003,6 +2116,14 @@ textarea:focus {
 @media (max-width: 560px) {
   body {
     font-size: 18px;
+  }
+  .prompt {
+    top: 1.05rem;
+    font-size: 0.95rem;
+    max-width: 78vw;
+  }
+  .seek-bar {
+    bottom: 6.4rem;
   }
   /* Lighten the heaviest GPU work on phones: drop the second blurred light
      layer and soften the shadow blur, keeping the surface smooth. */

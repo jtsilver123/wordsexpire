@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=45" />
+    <link rel="stylesheet" href="/styles.css?v=47" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -80,6 +80,16 @@
       </div>
     </div>
 
+    <!-- A quiet milestone: a note you left has been kept alive many times. -->
+    <div class="welcome" id="milestone" hidden>
+      <p class="welcome-text" id="milestoneText"></p>
+      <p class="welcome-snippet" id="milestoneSnippet"></p>
+      <div class="welcome-foot">
+        <button type="button" class="text-link" id="milestoneShare">share it</button>
+        <button type="button" class="text-link" id="milestoneClose">close</button>
+      </div>
+    </div>
+
     <!-- Wordmark, top-left. Clicking it drifts back to the first flower. -->
     <button type="button" class="logo" id="logo" hidden aria-label="WordsExpire, back to the start">
       <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
@@ -121,6 +131,15 @@
 
     <p class="hint" id="hint" hidden></p>
 
+    <!-- The day's prompt, a quiet door into writing. -->
+    <button type="button" class="prompt" id="dailyPrompt" hidden></button>
+
+    <!-- Shown while seeking by who: which notes are lit, and a way to clear. -->
+    <div class="seek-bar" id="seekBar" hidden>
+      <span id="seekBarText"></span>
+      <button type="button" class="text-link" id="seekClear">clear</button>
+    </div>
+
     <!-- Always-present invitation to leave a note, and to read another. -->
     <button type="button" class="cta" id="leaveBtn" hidden>
       <span class="cta-mark" aria-hidden="true">+</span>
@@ -137,7 +156,32 @@
           someone came back to tend. Like a garden, like any love, it lives by being watered.
         </p>
         <div class="stats" id="stats"></div>
+
+        <!-- Seek by who: light up the notes said to or from a kind of person. -->
+        <label class="seek-field">
+          <span>seek notes by who they're about</span>
+          <select id="seekRel">
+            <option value="">everyone</option>
+            <option value="mother">a mother</option>
+            <option value="father">a father</option>
+            <option value="daughter">a daughter</option>
+            <option value="son">a son</option>
+            <option value="sister">a sister</option>
+            <option value="brother">a brother</option>
+            <option value="wife">a wife</option>
+            <option value="husband">a husband</option>
+            <option value="partner">a partner</option>
+            <option value="grandmother">a grandmother</option>
+            <option value="grandfather">a grandfather</option>
+            <option value="friend">a friend</option>
+            <option value="stranger">a stranger</option>
+            <option value="myself">myself</option>
+            <option value="someone_else">someone else</option>
+          </select>
+        </label>
+
         <div class="mine" id="mine" hidden></div>
+        <div class="mine" id="kept" hidden></div>
         <button type="button" class="text-link book-open" id="bookBtn">read every note</button>
         <p class="crisis">
           if you are carrying more than you can hold, you don't have to hold it alone.
@@ -211,7 +255,7 @@
     <!-- Leaving a petal. -->
     <div id="composer" class="overlay" hidden>
       <div class="card composer-card" role="dialog" aria-modal="true">
-        <p class="compose-caption">Leave something small.</p>
+        <p class="compose-caption" id="composeCaption">Leave something small.</p>
         <p class="compose-prompt" id="composePrompt"></p>
         <form id="composeForm" autocomplete="off">
           <!-- Honeypot: hidden from people, tempting to bots. -->
@@ -302,6 +346,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=46" type="module"></script>
+    <script src="/app.js?v=47" type="module"></script>
   </body>
 </html>

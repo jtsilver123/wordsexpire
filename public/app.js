@@ -143,13 +143,17 @@ function petalLife(p) {
   if (p.aliveness <= 0) {
     return kept ? `${kept} · now faded` : 'these words have faded';
   }
+  return kept ? `${kept} · ${fadePhrase(p)}` : fadePhrase(p);
+}
+
+// Just the "fades in about ..." clause, reused by the renewal confirmation.
+function fadePhrase(p) {
+  if (p.aliveness <= 0) return 'now faded';
   const left = p.aliveness * LIFESPAN_SECONDS;
-  let when;
-  if (left >= 2 * 86400) when = `fades in about ${Math.round(left / 86400)} days`;
-  else if (left >= 86400) when = 'fades in about a day';
-  else if (left >= 2 * 3600) when = `fades in about ${Math.round(left / 3600)} hours`;
-  else when = 'fades within the hour';
-  return kept ? `${kept} · ${when}` : when;
+  if (left >= 2 * 86400) return `fades in about ${Math.round(left / 86400)} days`;
+  if (left >= 86400) return 'fades in about a day';
+  if (left >= 2 * 3600) return `fades in about ${Math.round(left / 3600)} hours`;
+  return 'fades within the hour';
 }
 
 async function api(path, options) {
@@ -346,7 +350,7 @@ function drawFlowerSvg(flower) {
             cy: -len * 0.5,
             r: (46 + t * 72).toFixed(1),
             fill: `url(#halo-${flower.id})`,
-            opacity: ((0.12 + t * 0.32) * a).toFixed(3),
+            opacity: ((0.1 + t * 0.24) * a).toFixed(3),
           }),
         );
       }
@@ -1173,6 +1177,7 @@ function openReader(petal, pathEl) {
   spoken.hidden = false;
 
   $('#petalLife').textContent = petalLife(petal);
+  $('#petalLife').classList.remove('renewed');
   $('#petalLife').hidden = petal.expired; // the faded note already says it
 
   $('.keep').classList.remove('kept');
@@ -1205,10 +1210,19 @@ async function keepAlive(e) {
   }
 
   $('.keep').classList.add('kept');
-  $('#keepLabel').textContent = body.alreadyKept ? 'already kept alive' : 'renewed';
-  $('#petalLife').textContent = petalLife(body.petal);
-  $('#petalLife').hidden = false;
-  if (!body.alreadyKept) playRenewFx();
+  const life = $('#petalLife');
+  if (body.alreadyKept) {
+    $('#keepLabel').textContent = 'already kept alive';
+    life.textContent = petalLife(body.petal);
+    life.classList.remove('renewed');
+  } else {
+    // Make it unmistakable that the note now stays.
+    $('#keepLabel').textContent = 'kept alive';
+    life.textContent = `it will stay · ${fadePhrase(body.petal)}`;
+    life.classList.add('renewed');
+    playRenewFx();
+  }
+  life.hidden = false;
 
   const petal = body.petal;
   const flower = state.flowers.find((f) => f.petals.some((p) => p.id === petal.id));
@@ -1246,7 +1260,7 @@ async function keepAlive(e) {
       renderWorld();
       maybeNudgeShare();
     }
-  }, body.alreadyKept ? 1100 : 1900);
+  }, body.alreadyKept ? 1100 : 2700);
 }
 
 // Plays the sunlight-and-water renewal once. Re-adding the class after a

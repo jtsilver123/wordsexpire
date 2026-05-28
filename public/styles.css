@@ -1141,6 +1141,8 @@ select {
    so only the butterfly's wings (a child group) are animated. */
 .critter {
   pointer-events: none;
+  /* A soft shadow keeps the creature legible over the golden renewal halo. */
+  filter: drop-shadow(0 1px 1.5px rgba(48, 38, 22, 0.5));
 }
 
 .critter-butterfly .bfly-wings {
@@ -1155,6 +1157,26 @@ select {
   }
   50% {
     transform: scaleX(0.6);
+  }
+}
+
+/* Cheaper pulses for phones: smaller blur radii are far lighter to animate
+   across many petals. Swapped in via the mobile media query below. */
+@keyframes petalFreshLite {
+  0%, 100% {
+    filter: drop-shadow(0 0 1px rgba(232, 200, 130, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(232, 200, 130, 0.6));
+  }
+}
+
+@keyframes petalJustNowLite {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(247, 224, 158, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(247, 224, 158, 0.9));
   }
 }
 
@@ -1308,6 +1330,14 @@ select {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   color: var(--muted);
+  transition: color var(--slow) var(--ease), font-size var(--slow) var(--ease);
+}
+
+/* After a keep-alive: louder and warmer, so it's obvious the note now stays. */
+.petal-life.renewed {
+  color: var(--accent);
+  font-size: 0.94rem;
+  font-weight: 500;
 }
 
 .keep {
@@ -1919,6 +1949,13 @@ textarea:focus {
   }
   .flower-shadow {
     filter: blur(4px);
+  }
+  /* Lighter glow pulses on phones. */
+  .petal.fresh {
+    animation-name: petalFreshLite;
+  }
+  .petal.just-now {
+    animation-name: petalJustNowLite;
   }
   .card {
     padding: 2.6rem 1.5rem 1.7rem;

@@ -334,6 +334,22 @@ function drawFlowerSvg(flower) {
       label.textContent = snippet(petal.text);
       label.style.opacity = expired ? '0.55' : String(0.32 + 0.4 * a);
 
+      // A note kept alive many times wears a steady golden halo that grows with
+      // each renewal — a count signal, distinct from the recency pulse and the
+      // reply creature. Dimmed as the note fades; hidden once it has expired.
+      const renewals = petal.reactionCount || 0;
+      if (renewals > 0 && !expired) {
+        const t = Math.min(renewals, 12) / 12;
+        g.appendChild(
+          makeEl('circle', {
+            cx: 0,
+            cy: -len * 0.5,
+            r: (46 + t * 72).toFixed(1),
+            fill: `url(#halo-${flower.id})`,
+            opacity: ((0.12 + t * 0.32) * a).toFixed(3),
+          }),
+        );
+      }
       g.appendChild(under);
       g.appendChild(path);
       g.appendChild(label);
@@ -1225,7 +1241,11 @@ async function keepAlive(e) {
   // Give the sunlight-and-water animation room to finish before closing.
   setTimeout(() => {
     closeOverlay($('#reader'));
-    if (!body.alreadyKept) maybeNudgeShare();
+    if (!body.alreadyKept) {
+      // The renewal count changed; redraw so its golden halo grows.
+      renderWorld();
+      maybeNudgeShare();
+    }
   }, body.alreadyKept ? 1100 : 1900);
 }
 

@@ -970,16 +970,17 @@ function followFish() {
     return;
   }
   const token = ++tweenToken;
-  const targetScale = 1.5;
+  const targetScale = 1.15; // close, but not too tight
   function step() {
     if (token !== tweenToken) return; // a drag, zoom, or another move took over
     const tr = getComputedStyle(me.swim).transform;
     const m = tr && tr !== 'none' ? new DOMMatrixReadOnly(tr) : null;
     const fx = (parseFloat(me.node.style.left) || 0) + (m ? m.m41 : 0);
     const fy = (parseFloat(me.node.style.top) || 0) + (m ? m.m42 : 0);
-    view.scale += (targetScale - view.scale) * 0.07;
-    view.x += (window.innerWidth / 2 - fx * view.scale - view.x) * 0.12;
-    view.y += (window.innerHeight / 2 - fy * view.scale - view.y) * 0.12;
+    // Gentle easing: the camera glides on, then trails the fish naturally.
+    view.scale += (targetScale - view.scale) * 0.05;
+    view.x += (window.innerWidth / 2 - fx * view.scale - view.x) * 0.08;
+    view.y += (window.innerHeight / 2 - fy * view.scale - view.y) * 0.08;
     applyView();
     requestAnimationFrame(step);
   }

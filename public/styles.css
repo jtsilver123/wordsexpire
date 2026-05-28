@@ -222,12 +222,13 @@ select {
   will-change: transform;
 }
 
-/* Koi gliding beneath the surface. */
+/* Koi gliding beneath the surface: kept under the flowers (z-index) and a touch
+   soft and dim, so the surface clearly reads as floating above them. */
 .koi {
   position: absolute;
   z-index: 0;
-  opacity: 0.5;
-  filter: blur(0.6px);
+  opacity: 0.44;
+  filter: blur(1px);
   pointer-events: none;
 }
 

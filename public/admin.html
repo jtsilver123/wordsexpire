@@ -207,7 +207,6 @@
         if (!opts.reply && n.reactionCount > 0) tags.appendChild(el('span', 'tag kept', 'kept alive ×' + n.reactionCount));
         if (!opts.reply && n.commentCount > 0) tags.appendChild(el('span', 'tag reply', n.commentCount + (n.commentCount === 1 ? ' reply' : ' replies')));
         if (!opts.reply && n.expired && !n.removed) tags.appendChild(el('span', 'tag', 'faded'));
-        if (!opts.reply && n.isExample) tags.appendChild(el('span', 'tag', 'example'));
         if (n.removed) tags.appendChild(el('span', 'tag removed', 'removed'));
         if (tags.childElementCount) card.appendChild(tags);
 

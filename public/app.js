@@ -869,6 +869,8 @@ function frogSchedule() {
   );
 }
 
+let worldRendered = false;
+
 function renderWorld() {
   const world = $('#world');
   // Remove only flowers and lilypads; the koi keep swimming across re-renders.
@@ -876,11 +878,19 @@ function renderWorld() {
   flowerNodes = [];
   state.flowers.forEach((flower, i) => {
     const node = buildFlowerNode(flower, i);
+    // Only the first paint blooms in; later re-renders (a kept note, a refresh)
+    // appear without replaying the entrance, so nothing flashes.
+    if (worldRendered) node.style.animation = 'none';
     world.appendChild(node);
     const p = flowerPosition(i);
     flowerNodes.push({ node, wx: p.x, wy: p.y });
   });
-  LILYPADS.forEach((lp, i) => world.appendChild(buildLilypadNode(lp, i)));
+  LILYPADS.forEach((lp, i) => {
+    const lpNode = buildLilypadNode(lp, i);
+    if (worldRendered) lpNode.style.animation = 'none';
+    world.appendChild(lpNode);
+  });
+  worldRendered = true;
 }
 
 // ---------- the cursor wave ----------
@@ -1574,7 +1584,6 @@ function openReader(petal, pathEl) {
   $('#petalText').textContent = petal.text;
   $('#petalText').classList.toggle('faded', petal.expired);
   $('#petalFadedNote').hidden = !petal.expired;
-  $('#petalExample').hidden = !petal.isExample;
   // An expired petal cannot be kept alive; hide the offer entirely.
   $('.keep').hidden = petal.expired;
 
@@ -2256,7 +2265,7 @@ function openBook() {
     t.className = 'book-text';
     t.textContent = p.text;
     row.appendChild(t);
-    const metaText = [p.isExample ? 'example' : null, contextLine(p) || null].filter(Boolean).join(' · ');
+    const metaText = contextLine(p) || '';
     if (metaText) {
       const m = document.createElement('p');
       m.className = 'book-meta';

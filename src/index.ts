@@ -97,7 +97,6 @@ type PetalRow = {
   direction: string | null;
   relationship: string | null;
   image_id: string | null;
-  is_example: number;
   last_renewed_at: number;
   reaction_count: number;
   comment_count?: number;
@@ -115,7 +114,6 @@ function shapePetal(p: PetalRow, at: number) {
     direction: p.direction,
     relationship: p.relationship,
     imageUrl: p.image_id ? `/i/${p.image_id}` : null,
-    isExample: !!p.is_example,
     reactionCount: p.reaction_count,
     commentCount: p.comment_count ?? 0,
     aliveness: a,
@@ -126,7 +124,7 @@ function shapePetal(p: PetalRow, at: number) {
 }
 
 const PETAL_COLUMNS =
-  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, is_example, last_renewed_at, reaction_count';
+  'id, flower_id, text, color, created_at, spoken_at, medium, direction, relationship, image_id, last_renewed_at, reaction_count';
 
 async function rateExceeded(
   db: D1Database,
@@ -419,7 +417,6 @@ app.post('/api/flowers/:id/petals', async (c) => {
           direction,
           relationship,
           image_id: imageId,
-          is_example: 0,
           last_renewed_at: at,
           reaction_count: 0,
         },
@@ -477,7 +474,10 @@ app.post('/api/petals/:id/react', async (c) => {
     return c.json({ message: 'Let the garden breathe for a moment.' }, 429);
   }
 
-  const petal = await c.env.DB.prepare(`SELECT ${PETAL_COLUMNS} FROM petals WHERE id = ? AND deleted_at IS NULL`)
+  const petal = await c.env.DB.prepare(
+    `SELECT ${PETAL_COLUMNS}, (SELECT COUNT(*) FROM comments c WHERE c.petal_id = petals.id AND c.deleted_at IS NULL) AS comment_count ` +
+      `FROM petals WHERE id = ? AND deleted_at IS NULL`,
+  )
     .bind(petalId)
     .first<PetalRow>();
   if (!petal) return c.json({ message: 'That petal has already gone.' }, 404);
@@ -633,7 +633,6 @@ app.get('/admin/overview', async (c) => {
     alive: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at >= ?', live),
     faded: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND last_renewed_at < ?', live),
     removed: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NOT NULL'),
-    examples: await one('SELECT COUNT(*) AS n FROM petals WHERE deleted_at IS NULL AND is_example = 1'),
     flowers: await one('SELECT COUNT(*) AS n FROM flowers'),
     revivals: await one('SELECT COALESCE(SUM(reaction_count), 0) AS n FROM petals WHERE deleted_at IS NULL'),
     replies: await one('SELECT COUNT(*) AS n FROM comments WHERE deleted_at IS NULL'),

@@ -1469,16 +1469,6 @@ select {
   color: var(--muted);
 }
 
-.petal-example {
-  margin: 0 0 0.8rem;
-  font-family: var(--sans);
-  font-size: 0.68rem;
-  letter-spacing: 0.07em;
-  text-transform: lowercase;
-  color: var(--muted);
-  opacity: 0.85;
-}
-
 .petal-context {
   margin: 0 0 0.4rem;
   font-style: italic;

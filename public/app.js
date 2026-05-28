@@ -105,10 +105,6 @@ function fadeColor(hex, aliveness) {
   return rgbStr(fadeRgb(hex, aliveness));
 }
 
-function isBackdated(petal) {
-  return petal.spokenAt && petal.createdAt - petal.spokenAt > 72000; // ~20 hours
-}
-
 function formatSpoken(epochSeconds) {
   return new Date(epochSeconds * 1000).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -1085,12 +1081,8 @@ function openReader(petal, pathEl) {
   ctxEl.hidden = !context;
 
   const spoken = $('#petalSpoken');
-  if (isBackdated(petal)) {
-    spoken.textContent = `spoken · ${formatSpoken(petal.spokenAt)}`;
-    spoken.hidden = false;
-  } else {
-    spoken.hidden = true;
-  }
+  spoken.textContent = `spoken · ${formatSpoken(petal.spokenAt)}`;
+  spoken.hidden = false;
 
   $('#petalLife').textContent = petalLife(petal);
   $('#petalLife').hidden = petal.expired; // the faded note already says it

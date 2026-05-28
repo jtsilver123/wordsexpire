@@ -269,24 +269,22 @@ app.get('/api/flowers', async (c) => {
   return c.json({ flowers });
 });
 
-// Presence: a heartbeat per open tab. A visitor's fish lingers after they go,
+// Presence: a heartbeat per visitor. A visitor's fish lingers after they go,
 // for a multiple of how long they stayed (clamped), so the pond feels alive.
-// Returns the count of present + lingering tabs. No identity, just a random token.
+// Keyed by a salted hash of the IP so the count can't be inflated and the
+// table stays bounded (one row per visitor, not per random token).
 const PRESENCE_MULT = 3; // a fish lingers this many times the visit length
 const PRESENCE_MIN = 60; // ...but at least this long after the last heartbeat
 const PRESENCE_MAX = 1800; // ...and at most this long (30 minutes)
 app.post('/api/presence', async (c) => {
   const at = now();
-  const body = await c.req.json<{ id?: string }>().catch(() => ({}) as { id?: string });
-  const id = typeof body.id === 'string' && body.id.length > 0 && body.id.length <= 64 ? body.id : null;
-  if (id) {
-    const existing = await c.env.DB.prepare('SELECT first_seen FROM presence WHERE id = ?').bind(id).first<{ first_seen: number }>();
-    const firstSeen = existing?.first_seen ?? at;
-    const linger = Math.min(Math.max((at - firstSeen) * PRESENCE_MULT, PRESENCE_MIN), PRESENCE_MAX);
-    await c.env.DB.prepare('INSERT OR REPLACE INTO presence (id, first_seen, linger_until) VALUES (?, ?, ?)')
-      .bind(id, firstSeen, at + linger)
-      .run();
-  }
+  const id = await hashIp(clientIp(c), c.env.IP_HASH_SALT);
+  const existing = await c.env.DB.prepare('SELECT first_seen FROM presence WHERE id = ?').bind(id).first<{ first_seen: number }>();
+  const firstSeen = existing?.first_seen ?? at;
+  const linger = Math.min(Math.max((at - firstSeen) * PRESENCE_MULT, PRESENCE_MIN), PRESENCE_MAX);
+  await c.env.DB.prepare('INSERT OR REPLACE INTO presence (id, first_seen, linger_until) VALUES (?, ?, ?)')
+    .bind(id, firstSeen, at + linger)
+    .run();
   await c.env.DB.prepare('DELETE FROM presence WHERE linger_until < ?').bind(at).run();
   const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM presence').first<{ n: number }>();
   return c.json({ count: Math.min(row?.n ?? 1, 99) });

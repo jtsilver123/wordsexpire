@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=57" />
+    <link rel="stylesheet" href="/styles.css?v=58" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -48,6 +48,12 @@
       <div id="ripples" class="ripples"></div>
       <div id="world" class="world"></div>
       <div id="fireflies" class="fireflies"></div>
+    </div>
+
+    <!-- Shown only if the garden can't be reached. -->
+    <div id="gardenError" class="garden-error" hidden>
+      <p>the garden is resting just now.</p>
+      <button type="button" class="text-link" id="gardenRetry">try again</button>
     </div>
 
     <!-- A quiet welcome back: news about the notes you have left. -->
@@ -409,6 +415,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=63" type="module"></script>
+    <script src="/app.js?v=64" type="module"></script>
   </body>
 </html>

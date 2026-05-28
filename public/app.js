@@ -638,10 +638,13 @@ function drawKoiSvg(scale, you) {
   const c = you
     ? { body: '#cf93a8', fin: '#c07f95', belly: '#f4e7ec', spot: '#a86b82' }
     : { body: '#eaad73', fin: '#e3a06a', belly: '#f5ecdd', spot: '#d57f47' };
-  const svg = makeEl('svg', { viewBox: '0 0 64 32', role: 'img' });
+  // Padded viewBox with a transparent hit rect, so the small fish is easy to
+  // tap on a phone. The art stays the same; only the touch area grows.
+  const svg = makeEl('svg', { viewBox: '-12 -24 88 80', role: 'img' });
   svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('width', String(64 * scale));
-  svg.setAttribute('height', String(32 * scale));
+  svg.setAttribute('width', String(88 * scale));
+  svg.setAttribute('height', String(80 * scale));
+  svg.appendChild(makeEl('rect', { x: -12, y: -24, width: 88, height: 80, fill: 'transparent' }));
   svg.appendChild(makeEl('path', { d: 'M14 16 L2 6 Q7 16 2 26 Z', fill: c.fin }));
   svg.appendChild(makeEl('ellipse', { cx: 38, cy: 16, rx: 24, ry: 9, fill: c.body }));
   svg.appendChild(makeEl('ellipse', { cx: 46, cy: 14, rx: 8, ry: 4.5, fill: c.belly }));
@@ -653,8 +656,6 @@ function drawKoiSvg(scale, you) {
 // Each koi is another visitor (real or lingering), so the pond shows who else
 // is drawn to the same water. The number is driven by the presence heartbeat.
 let koiNodes = [];
-const presenceId =
-  window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'p' + Math.random().toString(36).slice(2) + Date.now();
 
 function makeKoi(you) {
   const world = $('#world');
@@ -711,11 +712,15 @@ function setKoiCount(n) {
   koiSwimEls = koiNodes.map((k) => k.swim);
 }
 
-// A heartbeat keeps this tab present; the response says how many are around
-// (including you and any lingering visitors).
+// A heartbeat keeps this visitor present; the response says how many are around
+// (including you and any lingering visitors). Keyed server-side by IP.
+let presenceCount = 1;
 async function heartbeat() {
-  const { ok, body } = await api('/api/presence', { method: 'POST', body: JSON.stringify({ id: presenceId }) });
-  if (ok && typeof body.count === 'number') setKoiCount(body.count);
+  const { ok, body } = await api('/api/presence', { method: 'POST' });
+  if (ok && typeof body.count === 'number') {
+    presenceCount = body.count;
+    setKoiCount(presenceCount);
+  }
 }
 
 function startPresence() {
@@ -919,6 +924,25 @@ function setFlowers(list) {
   renderWorld();
 }
 
+// Load the garden, showing a gentle message (with a retry) if it can't be reached.
+async function loadGarden() {
+  const { ok, body } = await api('/api/flowers');
+  if (ok && body && body.flowers) {
+    setFlowers(body.flowers);
+    $('#gardenError').hidden = true;
+    return true;
+  }
+  $('#gardenError').hidden = false;
+  return false;
+}
+
+// A quiet background refresh; never interrupts what the visitor is doing.
+async function refreshGarden() {
+  if (document.hidden || followActive() || document.querySelector('.overlay.open')) return;
+  const { ok, body } = await api('/api/flowers');
+  if (ok && body && body.flowers) setFlowers(body.flowers);
+}
+
 // ---------- the view (pan / zoom) ----------
 
 function applyView() {
@@ -1038,6 +1062,7 @@ function trailFish(me) {
 const NAV_STEPS = [
   {
     icon: 'pond',
+    label: 'frame the whole pond',
     go: () => {
       const pv = pondView();
       focusOn(pv.cx, pv.cy, pv.scale, 1500);
@@ -1045,23 +1070,28 @@ const NAV_STEPS = [
   },
   {
     icon: 'fish',
+    label: 'find your fish',
     go: followFish,
   },
   {
     icon: 'flower',
+    label: 'go to the open flower',
     go: () => {
       const idx = state.flowers.findIndex((f) => f.hasRoom);
       const p = flowerPosition(idx >= 0 ? idx : Math.max(state.flowers.length - 1, 0));
       focusOn(p.x, p.y, 1.0, 1500);
     },
   },
-];
+  // With reduced motion there are no swimming fish, so skip that view.
+].filter((s) => !(reduceMotion && s.icon === 'fish'));
 let navIndex = 0;
 function updateRecenter() {
   const b = $('#recenter');
   if (!b) return;
+  const step = NAV_STEPS[navIndex];
   b.classList.remove('show-pond', 'show-fish', 'show-flower');
-  b.classList.add('show-' + NAV_STEPS[navIndex].icon);
+  b.classList.add('show-' + step.icon);
+  b.setAttribute('aria-label', step.label);
 }
 // The one-time orientation toast for each navigator view.
 const NAV_INTRO = { pond: 'pondIntro', fish: 'fishIntro', flower: 'flowerIntro' };
@@ -2081,6 +2111,7 @@ function wireOverlays() {
   $('#seekClear').addEventListener('click', clearSeek);
   document.querySelectorAll('#about .tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
   $('#milestoneClose').addEventListener('click', hideMilestone);
+  $('#gardenRetry').addEventListener('click', loadGarden);
   document.querySelectorAll('[data-nav-intro-close]').forEach((b) =>
     b.addEventListener('click', () => hideToast(b.dataset.navIntroClose)),
   );
@@ -2300,6 +2331,14 @@ async function openAbout() {
   }
   const s = body.stats;
   const lines = [];
+  // Who's here, drawn from the live presence count (you, plus other visitors).
+  if (presenceCount > 1) {
+    lines.push(
+      `<p class="stat"><span class="n">${plural(presenceCount, 'person', 'people')}</span> wandering here<small>each one a fish in the pond</small></p>`,
+    );
+  } else {
+    lines.push('<p class="stat">you have the garden to yourself right now<small>each visitor becomes a fish in the pond</small></p>');
+  }
   lines.push(
     `<p class="stat"><span class="n">${plural(s.petalsAlive, 'note', 'notes')}</span> are open in the garden right now<small>across ${plural(s.flowers, 'flower', 'flowers')}</small></p>`,
   );
@@ -2474,6 +2513,18 @@ function revealChrome() {
   chromeRevealed = true;
   $('#dailyPrompt').textContent = dailyPrompt();
   for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#recenter', '#sound', '#dailyPrompt']) $(sel).hidden = false;
+  updateRecenter(); // set the navigator's first icon and label
+  // A one-time whisper that ambient sound is here, if they'd like it.
+  if (!localStorage.getItem('we_sound_hinted') && !reduceMotion) {
+    localStorage.setItem('we_sound_hinted', '1');
+    setTimeout(() => {
+      const st = $('#soundToggle');
+      if (st && !$('#sound').hidden) {
+        showTip('a little sound, if you like', st);
+        setTimeout(hideTip, 4200);
+      }
+    }, 1800);
+  }
 }
 
 async function start() {
@@ -2483,8 +2534,10 @@ async function start() {
   wireOverlays();
   await runOnboarding();
 
-  const { ok, body } = await api('/api/flowers');
-  if (ok && body.flowers) setFlowers(body.flowers);
+  await loadGarden();
+  // Quietly refresh now and then: picks up others' new notes and keeps the
+  // recency glow honest, without disturbing reading, writing, or following.
+  setInterval(refreshGarden, 240000);
   startPresence();
   setupFireflies();
   applyWater(); // re-evaluate now that the fireflies layer exists

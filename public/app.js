@@ -1004,6 +1004,12 @@ const FISH_SCALE = 1.15; // close, but not too tight
 function followFish() {
   const me = koiNodes[0];
   if (!me) return;
+  // The first time, explain what the fish are.
+  if (!localStorage.getItem('we_fish_seen')) {
+    localStorage.setItem('we_fish_seen', '1');
+    showToast('fishIntro');
+    setTimeout(() => hideToast('fishIntro'), 9000);
+  }
   const p = fishPos(me);
   if (reduceMotion) {
     focusOn(p.x, p.y, FISH_SCALE, 1400);
@@ -1891,7 +1897,7 @@ function hideLeaveInvite() {
 // True while any toast or modal is up, so gentle nudges never stack or
 // interrupt reading or writing.
 function busyForNudge() {
-  const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone'].some((id) => {
+  const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone', 'fishIntro'].some((id) => {
     const e = document.getElementById(id);
     return e && !e.hidden && e.classList.contains('show');
   });
@@ -2059,6 +2065,7 @@ function wireOverlays() {
   $('#seekClear').addEventListener('click', clearSeek);
   document.querySelectorAll('#about .tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
   $('#milestoneClose').addEventListener('click', hideMilestone);
+  $('#fishIntroClose').addEventListener('click', () => hideToast('fishIntro'));
   $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
   $('#inviteLater').addEventListener('click', hideShareInvite);
   $('#leaveInviteGo').addEventListener('click', () => {

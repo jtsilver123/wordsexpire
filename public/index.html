@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=56" />
+    <link rel="stylesheet" href="/styles.css?v=57" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -52,7 +52,7 @@
 
     <!-- A quiet welcome back: news about the notes you have left. -->
     <div class="welcome" id="welcome" hidden>
-      <button type="button" class="text-link welcome-close" id="welcomeClose">later</button>
+      <button type="button" class="text-link welcome-close" id="welcomeClose" aria-label="close">×</button>
       <p class="welcome-text" id="welcomeText"></p>
       <p class="welcome-snippet" id="welcomeSnippet"></p>
       <div class="welcome-foot">
@@ -62,7 +62,7 @@
 
     <!-- A gentle nudge after planting or tending: invite someone you love. -->
     <div class="welcome" id="shareInvite" hidden>
-      <button type="button" class="text-link welcome-close" id="inviteLater">later</button>
+      <button type="button" class="text-link welcome-close" id="inviteLater" aria-label="close">×</button>
       <p class="welcome-text">share this small place?</p>
       <p class="welcome-snippet">the garden grows when others plant their words here too.</p>
       <div class="welcome-foot">
@@ -72,7 +72,7 @@
 
     <!-- After reading a few, invite a quiet reader to plant their own note. -->
     <div class="welcome" id="leaveInvite" hidden>
-      <button type="button" class="text-link welcome-close" id="leaveInviteLater">later</button>
+      <button type="button" class="text-link welcome-close" id="leaveInviteLater" aria-label="close">×</button>
       <p class="welcome-text">there's room for your words too</p>
       <p class="welcome-snippet">you've read a few. would you like to leave a note of your own?</p>
       <div class="welcome-foot">
@@ -80,16 +80,28 @@
       </div>
     </div>
 
-    <!-- First time in fish view: what the fish are. -->
-    <div class="welcome" id="fishIntro" hidden>
-      <button type="button" class="text-link welcome-close" id="fishIntroClose">okay</button>
+    <!-- First time in each navigator view: a one-line orientation. -->
+    <div class="welcome nav-intro" id="pondIntro" hidden>
+      <button type="button" class="text-link welcome-close" data-nav-intro-close="pondIntro" aria-label="close">×</button>
+      <p class="welcome-text">the whole pond, at a glance.</p>
+      <p class="welcome-snippet">each fish is someone here; each flower holds notes people have left.</p>
+    </div>
+
+    <div class="welcome nav-intro" id="fishIntro" hidden>
+      <button type="button" class="text-link welcome-close" data-nav-intro-close="fishIntro" aria-label="close">×</button>
       <p class="welcome-text">the rose fish is you.</p>
       <p class="welcome-snippet">every other fish is someone else who has wandered here. the pond fills as more people visit.</p>
     </div>
 
+    <div class="welcome nav-intro" id="flowerIntro" hidden>
+      <button type="button" class="text-link welcome-close" data-nav-intro-close="flowerIntro" aria-label="close">×</button>
+      <p class="welcome-text">a flower of notes.</p>
+      <p class="welcome-snippet">tap a petal to read it, or the flower's center to leave one of your own.</p>
+    </div>
+
     <!-- A quiet milestone: a note you left has been kept alive many times. -->
     <div class="welcome" id="milestone" hidden>
-      <button type="button" class="text-link welcome-close" id="milestoneClose">later</button>
+      <button type="button" class="text-link welcome-close" id="milestoneClose" aria-label="close">×</button>
       <p class="welcome-text" id="milestoneText"></p>
       <p class="welcome-snippet" id="milestoneSnippet"></p>
       <div class="welcome-foot">
@@ -182,7 +194,7 @@
     <!-- The garden: a reflection, the living numbers, your notes, and ways to explore. -->
     <div id="about" class="overlay" hidden>
       <div class="card about-card" role="dialog" aria-modal="true">
-        <button type="button" class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close aria-label="close">×</button>
 
         <div class="tabs" role="tablist">
           <button type="button" class="tab on" data-tab="garden">the garden</button>
@@ -247,7 +259,7 @@
       <div class="card book-card" role="dialog" aria-modal="true">
         <p class="book-head">the garden, in words</p>
         <div class="book-list" id="bookList"></div>
-        <button type="button" class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close aria-label="close">×</button>
       </div>
     </div>
 
@@ -297,7 +309,7 @@
           <button type="button" class="text-link" id="shareBtn">share this note</button>
           <button type="button" class="text-link reader-report" id="reportBtn">report</button>
         </div>
-        <button type="button" class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close aria-label="close">×</button>
       </div>
       <button type="button" class="reader-nav reader-prev" id="readerPrev" aria-label="previous note">‹</button>
       <button type="button" class="reader-nav reader-next" id="readerNext" aria-label="next note">›</button>
@@ -393,10 +405,10 @@
           <p>Thank you for that.</p>
           <button type="button" class="text-link" id="shareNew">keep a link to it</button>
         </div>
-        <button type="button" class="text-link close" data-close>close</button>
+        <button type="button" class="text-link close" data-close aria-label="close">×</button>
       </div>
     </div>
 
-    <script src="/app.js?v=61" type="module"></script>
+    <script src="/app.js?v=63" type="module"></script>
   </body>
 </html>

@@ -1004,12 +1004,6 @@ const FISH_SCALE = 1.15; // close, but not too tight
 function followFish() {
   const me = koiNodes[0];
   if (!me) return;
-  // The first time, explain what the fish are.
-  if (!localStorage.getItem('we_fish_seen')) {
-    localStorage.setItem('we_fish_seen', '1');
-    showToast('fishIntro');
-    setTimeout(() => hideToast('fishIntro'), 9000);
-  }
   const p = fishPos(me);
   if (reduceMotion) {
     focusOn(p.x, p.y, FISH_SCALE, 1400);
@@ -1069,8 +1063,29 @@ function updateRecenter() {
   b.classList.remove('show-pond', 'show-fish', 'show-flower');
   b.classList.add('show-' + NAV_STEPS[navIndex].icon);
 }
+// The one-time orientation toast for each navigator view.
+const NAV_INTRO = { pond: 'pondIntro', fish: 'fishIntro', flower: 'flowerIntro' };
+let navIntroTimer = 0;
+function hideNavIntros() {
+  for (const id of Object.values(NAV_INTRO)) {
+    const el = $('#' + id);
+    if (el && !el.hidden) hideToast(id);
+  }
+  clearTimeout(navIntroTimer);
+}
+function maybeShowNavIntro(view) {
+  const id = NAV_INTRO[view];
+  const flag = 'we_seen_' + view;
+  if (!id || localStorage.getItem(flag)) return;
+  localStorage.setItem(flag, '1');
+  showToast(id);
+  navIntroTimer = setTimeout(() => hideToast(id), 11000); // a gentle fallback
+}
 function recenter() {
-  NAV_STEPS[navIndex].go();
+  const step = NAV_STEPS[navIndex];
+  hideNavIntros(); // changing views clears any open intro
+  step.go();
+  maybeShowNavIntro(step.icon);
   navIndex = (navIndex + 1) % NAV_STEPS.length;
   updateRecenter();
 }
@@ -1147,6 +1162,7 @@ function wireWorld() {
 
   vp.addEventListener('pointerdown', (e) => {
     tweenToken++; // stop any easing (or glide) the moment a hand touches the world
+    hideNavIntros(); // and let go of any orientation toast
     settleWave(); // flowers shouldn't stay leaned while dragging the pond
     velX = 0;
     velY = 0;
@@ -1897,7 +1913,7 @@ function hideLeaveInvite() {
 // True while any toast or modal is up, so gentle nudges never stack or
 // interrupt reading or writing.
 function busyForNudge() {
-  const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone', 'fishIntro'].some((id) => {
+  const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone', 'pondIntro', 'fishIntro', 'flowerIntro'].some((id) => {
     const e = document.getElementById(id);
     return e && !e.hidden && e.classList.contains('show');
   });
@@ -2065,7 +2081,9 @@ function wireOverlays() {
   $('#seekClear').addEventListener('click', clearSeek);
   document.querySelectorAll('#about .tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
   $('#milestoneClose').addEventListener('click', hideMilestone);
-  $('#fishIntroClose').addEventListener('click', () => hideToast('fishIntro'));
+  document.querySelectorAll('[data-nav-intro-close]').forEach((b) =>
+    b.addEventListener('click', () => hideToast(b.dataset.navIntroClose)),
+  );
   $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
   $('#inviteLater').addEventListener('click', hideShareInvite);
   $('#leaveInviteGo').addEventListener('click', () => {

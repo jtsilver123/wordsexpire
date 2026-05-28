@@ -400,9 +400,11 @@ select {
 /* Dismiss in the top-right corner, like the close on a card. */
 .welcome-close {
   position: absolute;
-  top: 0.6rem;
-  right: 0.95rem;
-  font-size: 0.74rem;
+  top: 0.35rem;
+  right: 0.55rem;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0.2rem 0.45rem;
 }
 
 .welcome.show {
@@ -2077,9 +2079,11 @@ textarea:focus {
 
 .close {
   position: absolute;
-  top: 1rem;
-  right: 1.1rem;
-  font-size: 0.78rem;
+  top: 0.7rem;
+  right: 0.8rem;
+  font-size: 1.55rem;
+  line-height: 1;
+  padding: 0.2rem 0.5rem;
 }
 
 #begin {

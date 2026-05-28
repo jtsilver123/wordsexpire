@@ -375,10 +375,18 @@ select {
   background: var(--surface);
   border-radius: 14px;
   box-shadow: 0 16px 44px -24px rgba(58, 51, 44, 0.45);
-  padding: 1rem 1.3rem 0.9rem;
+  padding: 1.7rem 1.3rem 0.95rem;
   text-align: center;
   opacity: 0;
   transition: opacity 700ms var(--ease), transform 700ms var(--ease);
+}
+
+/* Dismiss in the top-right corner, like the close on a card. */
+.welcome-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.95rem;
+  font-size: 0.74rem;
 }
 
 .welcome.show {

@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=48" />
+    <link rel="stylesheet" href="/styles.css?v=50" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -52,41 +52,41 @@
 
     <!-- A quiet welcome back: news about the notes you have left. -->
     <div class="welcome" id="welcome" hidden>
+      <button type="button" class="text-link welcome-close" id="welcomeClose">later</button>
       <p class="welcome-text" id="welcomeText"></p>
       <p class="welcome-snippet" id="welcomeSnippet"></p>
       <div class="welcome-foot">
         <button type="button" class="text-link" id="welcomeGo">visit it</button>
-        <button type="button" class="text-link" id="welcomeClose">later</button>
       </div>
     </div>
 
     <!-- A gentle nudge after planting or tending: invite someone you love. -->
     <div class="welcome" id="shareInvite" hidden>
+      <button type="button" class="text-link welcome-close" id="inviteLater">later</button>
       <p class="welcome-text">share this small place?</p>
       <p class="welcome-snippet">the garden grows when others plant their words here too.</p>
       <div class="welcome-foot">
         <button type="button" class="text-link" id="inviteShare">share</button>
-        <button type="button" class="text-link" id="inviteLater">later</button>
       </div>
     </div>
 
     <!-- After reading a few, invite a quiet reader to plant their own note. -->
     <div class="welcome" id="leaveInvite" hidden>
+      <button type="button" class="text-link welcome-close" id="leaveInviteLater">later</button>
       <p class="welcome-text">there's room for your words too</p>
       <p class="welcome-snippet">you've read a few. would you like to leave a note of your own?</p>
       <div class="welcome-foot">
         <button type="button" class="text-link" id="leaveInviteGo">leave a note</button>
-        <button type="button" class="text-link" id="leaveInviteLater">later</button>
       </div>
     </div>
 
     <!-- A quiet milestone: a note you left has been kept alive many times. -->
     <div class="welcome" id="milestone" hidden>
+      <button type="button" class="text-link welcome-close" id="milestoneClose">later</button>
       <p class="welcome-text" id="milestoneText"></p>
       <p class="welcome-snippet" id="milestoneSnippet"></p>
       <div class="welcome-foot">
         <button type="button" class="text-link" id="milestoneShare">share it</button>
-        <button type="button" class="text-link" id="milestoneClose">close</button>
       </div>
     </div>
 
@@ -346,6 +346,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=49" type="module"></script>
+    <script src="/app.js?v=50" type="module"></script>
   </body>
 </html>

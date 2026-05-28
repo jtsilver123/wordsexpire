@@ -973,6 +973,8 @@ function wireWorld() {
   let pinchDist = 0;
   let velX = 0;
   let velY = 0;
+  let lastTapTime = 0;
+  let lastTapPos = { x: 0, y: 0 };
 
   // After a flick, the pond keeps gliding and slows to rest.
   function glide() {
@@ -1052,6 +1054,22 @@ function wireWorld() {
       lastT = performance.now();
     }
     pinchDist = 0;
+
+    // Double-tap empty water to zoom in toward that spot (touch, not mouse,
+    // which has the wheel). Taps on flowers/controls are left to open them.
+    if (wasSingle && pointers.size === 0 && !moved && e.pointerType !== 'mouse') {
+      const onPond = !(e.target.closest && e.target.closest('.bloom-hit, button, a, input, select, .card'));
+      const now = performance.now();
+      if (onPond && now - lastTapTime < 300 && Math.hypot(e.clientX - lastTapPos.x, e.clientY - lastTapPos.y) < 32) {
+        const target = Math.min(view.scale * 1.8, 2.4);
+        focusOn((e.clientX - view.x) / view.scale, (e.clientY - view.y) / view.scale, target, 480);
+        lastTapTime = 0; // consume the pair
+      } else if (onPond) {
+        lastTapTime = now;
+        lastTapPos = { x: e.clientX, y: e.clientY };
+      }
+    }
+
     // Let go of a drag with speed behind it, and the pond glides on.
     if (pointers.size === 0 && wasSingle && moved && Math.hypot(velX, velY) > 1) glide();
   };

@@ -765,23 +765,62 @@ select {
 }
 
 /* A small credit, bottom-right. */
+/* A small credit, resting at the foot of the garden panel. */
 .credit {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 1.2rem;
-  margin: 0;
-  z-index: 6;
+  margin: 1.4rem 0 0;
   font-family: var(--sans);
   font-size: 0.72rem;
   letter-spacing: 0.05em;
   color: var(--muted);
   opacity: 0.8;
-  pointer-events: none;
-  animation: softIn var(--slower) var(--ease);
 }
 
 .credit-heart {
   font-size: 0.78rem;
+}
+
+/* Recenter control, bottom-right: one button, two destinations. */
+.recenter {
+  position: fixed;
+  right: 1.4rem;
+  bottom: 1.4rem;
+  z-index: 6;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: rgba(251, 247, 241, 0.86);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 8px 22px -12px rgba(58, 51, 44, 0.5);
+  transition: color var(--slow) var(--ease), border-color var(--slow) var(--ease), background var(--slow) var(--ease);
+  animation: softIn var(--slower) var(--ease);
+}
+
+.recenter:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.recenter svg {
+  width: 23px;
+  height: 23px;
+}
+
+.recenter .ic-pond {
+  display: none;
+}
+
+.recenter.to-pond .ic-flower {
+  display: none;
+}
+
+.recenter.to-pond .ic-pond {
+  display: inline;
 }
 
 .corner-link {
@@ -2253,17 +2292,11 @@ textarea:focus {
   .wander {
     bottom: 3.9rem;
   }
-  /* Back in the bottom-right corner, but stacked onto two lines so it stays
-     narrow and clears the centered "leave a note" button on small screens. */
-  .credit {
-    right: 0.9rem;
-    bottom: 0.9rem;
-    font-size: 0.62rem;
-    text-align: right;
-    line-height: 1.35;
-  }
-  .credit-line {
-    display: block;
+  .recenter {
+    width: 42px;
+    height: 42px;
+    right: 1rem;
+    bottom: 1rem;
   }
   /* Drop the hint below the logo and the garden link so they never overlap. */
   .hint {

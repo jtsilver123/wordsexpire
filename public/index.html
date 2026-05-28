@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=51" />
+    <link rel="stylesheet" href="/styles.css?v=52" />
   </head>
   <body>
     <!-- First visit only: three quiet lines. -->
@@ -146,7 +146,26 @@
       <span>leave a note</span>
     </button>
     <button type="button" class="wander" id="wanderBtn" hidden>wander to another</button>
-    <p class="credit" id="credit" hidden><span class="credit-line">made with <span class="credit-heart">❤️</span></span> <span class="credit-line">in NYC</span></p>
+
+    <!-- Recenter, bottom-right: frame the open flower, or the whole pond. -->
+    <button type="button" class="recenter" id="recenter" hidden aria-label="recenter the view">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <g class="ic-flower" transform="translate(12 12)" fill="currentColor">
+          <ellipse rx="2.3" ry="3.9" cy="-5" />
+          <ellipse rx="2.3" ry="3.9" cy="-5" transform="rotate(72)" />
+          <ellipse rx="2.3" ry="3.9" cy="-5" transform="rotate(144)" />
+          <ellipse rx="2.3" ry="3.9" cy="-5" transform="rotate(216)" />
+          <ellipse rx="2.3" ry="3.9" cy="-5" transform="rotate(288)" />
+          <circle r="2.5" fill="#d3bf86" />
+        </g>
+        <g class="ic-pond" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9 V4 H9" />
+          <path d="M15 4 H20 V9" />
+          <path d="M20 15 V20 H15" />
+          <path d="M9 20 H4 V15" />
+        </g>
+      </svg>
+    </button>
 
     <!-- The garden: a reflection, the living numbers, your notes, and ways to explore. -->
     <div id="about" class="overlay" hidden>
@@ -207,6 +226,7 @@
           if you are carrying more than you can hold, you don't have to hold it alone.
           <a class="crisis-link" href="https://findahelpline.com" target="_blank" rel="noopener">find someone to talk to</a>.
         </p>
+        <p class="credit" id="credit">made with <span class="credit-heart">❤️</span> in NYC</p>
       </div>
     </div>
 
@@ -365,6 +385,6 @@
       </div>
     </div>
 
-    <script src="/app.js?v=51" type="module"></script>
+    <script src="/app.js?v=52" type="module"></script>
   </body>
 </html>

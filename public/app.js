@@ -865,6 +865,7 @@ function setFlowers(list) {
 function applyView() {
   $('#world').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
   updateCompass();
+  updateRecenter();
 }
 
 // The world point currently at the center of the screen.
@@ -919,6 +920,27 @@ function updateCompass() {
   const ang = (Math.atan2(p.y - c.y, p.x - c.x) * 180) / Math.PI;
   $('#compassArrow').style.transform = `rotate(${ang}deg)`;
   compass.hidden = false;
+}
+
+// A maps-style locate toggle: when you're zoomed in on a flower it frames the
+// whole pond; when you're out over the pond it drifts in to the flower still
+// waiting for a note. Its icon shows whichever move comes next.
+function recenterTargetIsPond() {
+  return view.scale > 0.75;
+}
+function updateRecenter() {
+  const b = $('#recenter');
+  if (b) b.classList.toggle('to-pond', recenterTargetIsPond());
+}
+function recenter() {
+  if (recenterTargetIsPond()) {
+    const pv = pondView();
+    focusOn(pv.cx, pv.cy, pv.scale, 1100);
+  } else {
+    const idx = state.flowers.findIndex((f) => f.hasRoom);
+    const p = flowerPosition(idx >= 0 ? idx : Math.max(state.flowers.length - 1, 0));
+    focusOn(p.x, p.y, 1.0, 1100);
+  }
 }
 
 function focusOn(worldX, worldY, scale, ms = 900) {
@@ -1899,6 +1921,7 @@ function wireOverlays() {
     const p = flowerPosition(i);
     focusOn(p.x, p.y, 1.0);
   });
+  $('#recenter').addEventListener('click', recenter);
   $('#welcomeClose').addEventListener('click', hideWelcome);
   $('#dailyPrompt').addEventListener('click', () => openComposer());
   $('#seekRel').addEventListener('change', (e) => {
@@ -2299,7 +2322,7 @@ function revealChrome() {
   if (chromeRevealed) return;
   chromeRevealed = true;
   $('#dailyPrompt').textContent = dailyPrompt();
-  for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#credit', '#sound', '#dailyPrompt']) $(sel).hidden = false;
+  for (const sel of ['#logo', '#aboutBtn', '#wanderBtn', '#recenter', '#sound', '#dailyPrompt']) $(sel).hidden = false;
 }
 
 async function start() {

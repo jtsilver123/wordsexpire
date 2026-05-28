@@ -48,13 +48,19 @@ function dailyPrompt() {
   return PROMPTS[day % PROMPTS.length];
 }
 
+// Read a stored JSON value, falling back if it's missing or corrupt.
+function readJSON(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : JSON.parse(v);
+  } catch {
+    return fallback;
+  }
+}
+
 // Notes this visitor has kept alive, so they can find them again.
 function getKept() {
-  try {
-    return JSON.parse(localStorage.getItem('we_kept') || '[]');
-  } catch {
-    return [];
-  }
+  return readJSON('we_kept', []);
 }
 let keptCache = null;
 function keptSet() {
@@ -168,6 +174,11 @@ function contextLine(p) {
 function snippet(text) {
   const s = text.trim().replace(/\s+/g, ' ');
   return s.length > 13 ? `${s.slice(0, 13).trimEnd()}…` : s;
+}
+
+// A longer, quoted excerpt for the toasts.
+function quoteSnippet(text, n = 70) {
+  return `“${text.length > n ? `${text.slice(0, n)}…` : text}”`;
 }
 
 // How long a petal has left, and how often it's been renewed.
@@ -1648,11 +1659,7 @@ function wanderToRandom() {
 
 // The notes this browser has left, kept locally (no account).
 function getMyNotes() {
-  try {
-    return JSON.parse(localStorage.getItem('we_my_notes') || '[]');
-  } catch {
-    return [];
-  }
+  return readJSON('we_my_notes', []);
 }
 function saveMyNote(id) {
   const a = getMyNotes().filter((x) => x !== id);
@@ -1667,11 +1674,7 @@ function saveMyNote(id) {
 // How many times we last saw each of our notes kept alive, to notice when a
 // stranger has tended one while we were away.
 function getSeen() {
-  try {
-    return JSON.parse(localStorage.getItem('we_my_seen') || '{}');
-  } catch {
-    return {};
-  }
+  return readJSON('we_my_seen', {});
 }
 function saveSeen(m) {
   localStorage.setItem('we_my_seen', JSON.stringify(m));
@@ -1681,11 +1684,7 @@ function saveSeen(m) {
 // when they've explored enough to be invited to leave their own.
 let readCache = null;
 function getRead() {
-  try {
-    return JSON.parse(localStorage.getItem('we_read') || '[]');
-  } catch {
-    return [];
-  }
+  return readJSON('we_read', []);
 }
 // Read OR written: both count as "seen", so no unread mark appears on them.
 function seenSet() {
@@ -1702,17 +1701,29 @@ function markRead(id) {
 }
 
 let welcomeTimer = 0;
+// All the top toasts share one fade-in / fade-out.
+function showToast(id) {
+  const el = $('#' + id);
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('show'));
+}
+function hideToast(id) {
+  const el = $('#' + id);
+  el.classList.remove('show');
+  setTimeout(() => (el.hidden = true), 600);
+}
 function hideWelcome() {
-  const w = $('#welcome');
-  w.classList.remove('show');
-  setTimeout(() => (w.hidden = true), 600);
+  hideToast('welcome');
+}
+function hideShareInvite() {
+  hideToast('shareInvite');
+}
+function hideLeaveInvite() {
+  hideToast('leaveInvite');
 }
 
-// A gentle invite after planting or keeping a note: pass this small place to
-// someone you love. Shown at most once per visit, and never while the
-// "welcome back" toast is still up.
 // True while any toast or modal is up, so gentle nudges never stack or
-// interrupt reading/writing.
+// interrupt reading or writing.
 function busyForNudge() {
   const toast = ['welcome', 'shareInvite', 'leaveInvite', 'milestone'].some((id) => {
     const e = document.getElementById(id);
@@ -1721,14 +1732,14 @@ function busyForNudge() {
   return toast || !!document.querySelector('.overlay.open');
 }
 
+// A gentle invite after planting or keeping a note: pass this small place to
+// someone you love. Shown at most once per visit, and never over another toast.
 function maybeNudgeShare() {
   if (sessionStorage.getItem('we_invite_shown')) return;
   setTimeout(() => {
     if (sessionStorage.getItem('we_invite_shown') || busyForNudge()) return;
     sessionStorage.setItem('we_invite_shown', '1');
-    const el = $('#shareInvite');
-    el.hidden = false;
-    requestAnimationFrame(() => el.classList.add('show'));
+    showToast('shareInvite');
   }, 1400);
 }
 
@@ -1741,22 +1752,8 @@ function maybeNudgeLeaveNote() {
     if (sessionStorage.getItem('we_leave_prompt_shown') || busyForNudge()) return;
     if (getMyNotes().length) return;
     sessionStorage.setItem('we_leave_prompt_shown', '1');
-    const el = $('#leaveInvite');
-    el.hidden = false;
-    requestAnimationFrame(() => el.classList.add('show'));
+    showToast('leaveInvite');
   }, 1000);
-}
-
-function hideLeaveInvite() {
-  const el = $('#leaveInvite');
-  el.classList.remove('show');
-  setTimeout(() => (el.hidden = true), 700);
-}
-
-function hideShareInvite() {
-  const el = $('#shareInvite');
-  el.classList.remove('show');
-  setTimeout(() => (el.hidden = true), 700);
 }
 
 async function shareSite(btn) {
@@ -1834,14 +1831,12 @@ function welcomeBack() {
 
   $('#hint').classList.remove('show'); // don't crowd the top with the hint
   $('#welcomeText').textContent = text;
-  $('#welcomeSnippet').textContent = `“${target.text.length > 70 ? `${target.text.slice(0, 70)}…` : target.text}”`;
+  $('#welcomeSnippet').textContent = quoteSnippet(target.text);
   $('#welcomeGo').onclick = () => {
     hideWelcome();
     goToPetal(target.id);
   };
-  const w = $('#welcome');
-  w.hidden = false;
-  requestAnimationFrame(() => w.classList.add('show'));
+  showToast('welcome');
   clearTimeout(welcomeTimer);
   welcomeTimer = setTimeout(hideWelcome, 10000);
 }
@@ -2079,19 +2074,15 @@ function renderKept() {
 // times. Offered with the chance to share it.
 function showMilestone(petal, n) {
   $('#milestoneText').textContent = `your words have been kept alive ${n} times.`;
-  $('#milestoneSnippet').textContent = `“${petal.text.length > 70 ? `${petal.text.slice(0, 70)}…` : petal.text}”`;
+  $('#milestoneSnippet').textContent = quoteSnippet(petal.text);
   $('#milestoneShare').onclick = () => shareNote(petal.id, $('#milestoneShare'));
-  const el = $('#milestone');
-  el.hidden = false;
-  requestAnimationFrame(() => el.classList.add('show'));
+  showToast('milestone');
   clearTimeout(welcomeTimer);
   welcomeTimer = setTimeout(hideMilestone, 12000);
 }
 
 function hideMilestone() {
-  const el = $('#milestone');
-  el.classList.remove('show');
-  setTimeout(() => (el.hidden = true), 700);
+  hideToast('milestone');
 }
 
 async function openAbout() {

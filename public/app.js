@@ -743,6 +743,33 @@ function koiRipples() {
 }
 
 // Fireflies drift above the pond and glow at dusk and through the night.
+// What drifts on the air this season (summer's air stays clear).
+const SEASON_DRIFT = {
+  spring: { cls: 'blossom', n: 12 },
+  autumn: { cls: 'leaf', n: 12 },
+  winter: { cls: 'snow', n: 18 },
+  summer: null,
+};
+function setupSeason() {
+  if (reduceMotion) return;
+  const layer = $('#season');
+  if (!layer) return;
+  const def = SEASON_DRIFT[currentSeason()];
+  if (!def) return;
+  const n = window.innerWidth < 560 ? Math.round(def.n * 0.6) : def.n;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('div');
+    p.className = 'drift ' + def.cls;
+    p.style.left = `${Math.random() * 100}vw`;
+    p.style.setProperty('--drift-x', `${Math.round(Math.random() * 140 - 70)}px`);
+    p.style.setProperty('--drift-r', `${Math.round(Math.random() * 360 - 180)}deg`);
+    p.style.setProperty('--drift-op', (0.4 + Math.random() * 0.4).toFixed(2));
+    p.style.animationDuration = `${14 + Math.random() * 16}s`;
+    p.style.animationDelay = `${(-Math.random() * 30).toFixed(1)}s`;
+    layer.appendChild(p);
+  }
+}
+
 function setupFireflies() {
   if (reduceMotion) return;
   const layer = $('#fireflies');
@@ -2483,6 +2510,18 @@ const WATER_PHASES = [
   { h: 19, c: ['#f2e3cf', '#e2cdbd', '#c7b6ad', '#ad9ea0'] }, // dusk
   { h: 24, c: ['#c6d1d3', '#aabbc1', '#8ca2aa', '#76909b'] }, // back to night
 ];
+
+// The pond also shifts with the real seasons: a gentle tint over the water and,
+// for three of them, something drifting on the air.
+function currentSeason() {
+  const m = new Date().getMonth(); // 0-11 (northern hemisphere)
+  if (m === 11 || m <= 1) return 'winter';
+  if (m <= 4) return 'spring';
+  if (m <= 7) return 'summer';
+  return 'autumn';
+}
+const SEASON_TINT = { spring: '#cfe0c2', summer: '#dde6bf', autumn: '#e9d2a6', winter: '#cbd8de' };
+
 function applyWater() {
   const d = new Date();
   const h = d.getHours() + d.getMinutes() / 60;
@@ -2497,9 +2536,11 @@ function applyWater() {
   }
   const span = hi.h - lo.h;
   const t = span ? (h - lo.h) / span : 0;
+  const tint = hexToRgb(SEASON_TINT[currentSeason()]);
   const root = document.documentElement;
   for (let i = 0; i < 4; i++) {
-    root.style.setProperty(`--w${i}`, rgbStr(mixRgb(hexToRgb(lo.c[i]), hexToRgb(hi.c[i]), t)));
+    const base = mixRgb(hexToRgb(lo.c[i]), hexToRgb(hi.c[i]), t);
+    root.style.setProperty(`--w${i}`, rgbStr(mixRgb(base, tint, 0.12)));
   }
   // Fireflies come out at dusk and stay through the night.
   const fireflies = $('#fireflies');
@@ -2540,6 +2581,7 @@ async function start() {
   setInterval(refreshGarden, 240000);
   startPresence();
   setupFireflies();
+  setupSeason();
   applyWater(); // re-evaluate now that the fireflies layer exists
 
   // On arrival, show only the pond and the one invitation. The rest of the

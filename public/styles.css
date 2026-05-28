@@ -294,6 +294,60 @@ select {
 }
 
 /* ---------- fireflies (dusk and night) ---------- */
+/* What the season drifts on the air: blossoms, leaves, or snow. */
+.season-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.drift {
+  position: absolute;
+  top: -6vh;
+  will-change: transform, opacity;
+  animation: seasonFall linear infinite;
+}
+
+@keyframes seasonFall {
+  0% {
+    transform: translate(0, -6vh) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--drift-op, 0.6);
+  }
+  92% {
+    opacity: var(--drift-op, 0.6);
+  }
+  100% {
+    transform: translate(var(--drift-x, 30px), 108vh) rotate(var(--drift-r, 180deg));
+    opacity: 0;
+  }
+}
+
+.drift.blossom {
+  width: 9px;
+  height: 9px;
+  border-radius: 60% 40% 55% 45%;
+  background: radial-gradient(circle at 35% 30%, #f6dce4, #e7a9bd);
+}
+
+.drift.leaf {
+  width: 11px;
+  height: 8px;
+  border-radius: 0 70% 30% 70%;
+  background: linear-gradient(135deg, #d99a4e, #b5642d);
+}
+
+.drift.snow {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.45));
+}
+
 .fireflies {
   position: absolute;
   inset: 0;

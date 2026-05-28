@@ -1159,7 +1159,10 @@ async function keepAlive(e) {
 
   // The petal updated in place above, so just close, no full-garden rebuild.
   // Give the sunlight-and-water animation room to finish before closing.
-  setTimeout(() => closeOverlay($('#reader')), body.alreadyKept ? 1100 : 1900);
+  setTimeout(() => {
+    closeOverlay($('#reader'));
+    if (!body.alreadyKept) maybeNudgeShare();
+  }, body.alreadyKept ? 1100 : 1900);
 }
 
 // Plays the sunlight-and-water renewal once. Re-adding the class after a
@@ -1344,6 +1347,7 @@ async function placePetal(e) {
     focusFlower(flower.id, 1.05);
     const fresh = $('#world').querySelector(`[data-petal-id="${body.petal && body.petal.id}"]`);
     if (fresh) fresh.classList.add('blooming');
+    maybeNudgeShare();
   }, 4200);
 }
 
@@ -1438,6 +1442,53 @@ function hideWelcome() {
   setTimeout(() => (w.hidden = true), 600);
 }
 
+// A gentle invite after planting or keeping a note: pass this small place to
+// someone you love. Shown at most once per visit, and never while the
+// "welcome back" toast is still up.
+function maybeNudgeShare() {
+  if (sessionStorage.getItem('we_invite_shown')) return;
+  setTimeout(() => {
+    if (sessionStorage.getItem('we_invite_shown')) return;
+    const welcome = $('#welcome');
+    if (welcome && !welcome.hidden && welcome.classList.contains('show')) return;
+    sessionStorage.setItem('we_invite_shown', '1');
+    const el = $('#shareInvite');
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add('show'));
+  }, 1400);
+}
+
+function hideShareInvite() {
+  const el = $('#shareInvite');
+  el.classList.remove('show');
+  setTimeout(() => (el.hidden = true), 700);
+}
+
+async function shareSite(btn) {
+  const url = location.origin + '/';
+  const flash = (msg) => {
+    const prev = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => (btn.textContent = prev), 2000);
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'WordsExpire', text: 'a small place to leave a note.', url });
+      hideShareInvite();
+      return;
+    } catch {
+      /* cancelled; fall through to copy */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    flash('link copied');
+    setTimeout(hideShareInvite, 1200);
+  } catch {
+    flash(url);
+  }
+}
+
 // On return, a quiet word about the notes you left: tended by a stranger, or
 // fading and in need of you.
 function welcomeBack() {
@@ -1520,6 +1571,8 @@ function wireOverlays() {
     focusOn(p.x, p.y, 1.0);
   });
   $('#welcomeClose').addEventListener('click', hideWelcome);
+  $('#inviteShare').addEventListener('click', (e) => shareSite(e.currentTarget));
+  $('#inviteLater').addEventListener('click', hideShareInvite);
   $('#keepBtn').addEventListener('click', keepAlive);
   $('#commentForm').addEventListener('submit', submitComment);
   $('#composeForm').addEventListener('submit', placePetal);

@@ -49,6 +49,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // the angle seeds settle into
 const SPACING = 560; // world distance between successive flowers
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Touch devices emulate mouseenter on tap, which flashes the petal preview just
+// before the note opens. Only wire the hover preview where hovering is real.
+const canHover = window.matchMedia('(hover: hover)').matches;
 
 const state = {
   flowers: [],
@@ -373,8 +376,10 @@ function drawFlowerSvg(flower) {
         if (moved) return;
         openReader(petal, path);
       });
-      g.addEventListener('mouseenter', () => showPetalTip(petal, path));
-      g.addEventListener('mouseleave', hideTip);
+      if (canHover) {
+        g.addEventListener('mouseenter', () => showPetalTip(petal, path));
+        g.addEventListener('mouseleave', hideTip);
+      }
     } else {
       const path = makeEl('path', {
         d: petalPath(slotSeed),

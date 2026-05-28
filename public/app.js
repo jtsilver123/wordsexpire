@@ -625,27 +625,30 @@ function buildLilypadNode(lp, idx) {
 }
 
 // A simple koi, seen from above, pointing right.
-function drawKoiSvg(scale) {
+// `you` tints the fish rose so a visitor can spot which one is themselves.
+function drawKoiSvg(scale, you) {
+  const c = you
+    ? { body: '#cf93a8', fin: '#c07f95', belly: '#f4e7ec', spot: '#a86b82' }
+    : { body: '#eaad73', fin: '#e3a06a', belly: '#f5ecdd', spot: '#d57f47' };
   const svg = makeEl('svg', { viewBox: '0 0 64 32', role: 'img' });
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('width', String(64 * scale));
   svg.setAttribute('height', String(32 * scale));
-  svg.appendChild(makeEl('path', { d: 'M14 16 L2 6 Q7 16 2 26 Z', fill: '#e3a06a' }));
-  svg.appendChild(makeEl('ellipse', { cx: 38, cy: 16, rx: 24, ry: 9, fill: '#eaad73' }));
-  svg.appendChild(makeEl('ellipse', { cx: 46, cy: 14, rx: 8, ry: 4.5, fill: '#f5ecdd' }));
-  svg.appendChild(makeEl('circle', { cx: 30, cy: 17, r: 4.5, fill: '#d57f47' }));
-  svg.appendChild(makeEl('path', { d: 'M34 8 Q40 2 44 8 Z', fill: '#e3a06a' }));
+  svg.appendChild(makeEl('path', { d: 'M14 16 L2 6 Q7 16 2 26 Z', fill: c.fin }));
+  svg.appendChild(makeEl('ellipse', { cx: 38, cy: 16, rx: 24, ry: 9, fill: c.body }));
+  svg.appendChild(makeEl('ellipse', { cx: 46, cy: 14, rx: 8, ry: 4.5, fill: c.belly }));
+  svg.appendChild(makeEl('circle', { cx: 30, cy: 17, r: 4.5, fill: c.spot }));
+  svg.appendChild(makeEl('path', { d: 'M34 8 Q40 2 44 8 Z', fill: c.fin }));
   return svg;
 }
 
 // Each koi is another visitor (real or lingering), so the pond shows who else
 // is drawn to the same water. The number is driven by the presence heartbeat.
 let koiNodes = [];
-const FISH_TIP = 'another visitor, here in the garden';
 const presenceId =
   window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'p' + Math.random().toString(36).slice(2) + Date.now();
 
-function makeKoi() {
+function makeKoi(you) {
   const world = $('#world');
   const node = document.createElement('div');
   node.className = 'koi';
@@ -659,16 +662,17 @@ function makeKoi() {
   swim.className = 'koi-swim';
   swim.style.animationDuration = `${36 + Math.random() * 18}s`;
   swim.style.animationDelay = `${-Math.random() * 45}s`;
-  swim.appendChild(drawKoiSvg(0.8 + Math.random() * 0.5));
+  swim.appendChild(drawKoiSvg(0.8 + Math.random() * 0.5, you));
   node.appendChild(swim);
-  // Desktop hovers; touch taps. Either way, learn this fish is another person.
+  // Desktop hovers; touch taps. Either way, learn who the fish is.
+  const tip = you ? 'this is you' : 'another visitor, here in the garden';
   if (canHover) {
-    node.addEventListener('mouseenter', () => showTip(FISH_TIP, swim.querySelector('svg')));
+    node.addEventListener('mouseenter', () => showTip(tip, swim.querySelector('svg')));
     node.addEventListener('mouseleave', hideTip);
   } else {
     node.addEventListener('click', (e) => {
       e.stopPropagation();
-      showTip(FISH_TIP, swim.querySelector('svg'));
+      showTip(tip, swim.querySelector('svg'));
       setTimeout(hideTip, 3500);
     });
   }
@@ -678,19 +682,20 @@ function makeKoi() {
   koiSwimEls.push(swim);
 }
 
-// Match the number of fish to the number of other visitors (never counting you).
+// One fish per visitor here: the first (and always-present) one is you.
 function setKoiCount(n) {
   if (reduceMotion) return;
-  n = Math.max(0, Math.min(n, 30));
-  while (koiNodes.length < n) makeKoi();
+  n = Math.max(1, Math.min(n, 30));
+  while (koiNodes.length < n) makeKoi(koiNodes.length === 0); // the first fish is you
   while (koiNodes.length > n) koiNodes.pop().node.remove();
   koiSwimEls = koiNodes.map((k) => k.swim);
 }
 
-// A heartbeat keeps this tab present; the response says how many are around.
+// A heartbeat keeps this tab present; the response says how many are around
+// (including you and any lingering visitors).
 async function heartbeat() {
   const { ok, body } = await api('/api/presence', { method: 'POST', body: JSON.stringify({ id: presenceId }) });
-  if (ok && typeof body.count === 'number') setKoiCount(body.count - 1); // a fish for everyone but you
+  if (ok && typeof body.count === 'number') setKoiCount(body.count);
 }
 
 function startPresence() {
